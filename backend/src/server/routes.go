@@ -22,6 +22,14 @@ func GetRoutes() []api.Route {
 			Path:        "ping",
 			HandlerFunc: HandlePingRequest,
 		},
+		// Ping Handler (Authenticated)
+		{
+			Method:       http.MethodGet,
+			Version:      ver1,
+			Path:         "secure/ping",
+			HandlerFunc:  HandlePingRequest,
+			Authenticate: true,
+		},
 		// Login Handler
 		{
 			Method:      http.MethodPost,

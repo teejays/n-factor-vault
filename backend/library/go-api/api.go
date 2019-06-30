@@ -9,7 +9,7 @@ import (
 )
 
 // StartServer initializes and runs the HTTP server
-func StartServer(addr string, port int, routes []Route, preMiddlewareFuncs, postMiddlewareFuncs []MiddlewareFunc) error {
+func StartServer(addr string, port int, routes []Route, authMiddlewareFunc MiddlewareFunc, preMiddlewareFuncs, postMiddlewareFuncs []MiddlewareFunc) error {
 
 	// Start the router
 	m := mux.NewRouter()
@@ -20,10 +20,20 @@ func StartServer(addr string, port int, routes []Route, preMiddlewareFuncs, post
 		m.Use(mux.MiddlewareFunc(mw))
 	}
 
-	// Range over routes and set them up
-	for _, r := range routes {
-		m.HandleFunc(r.GetPattern(), r.HandlerFunc).
-			Methods(r.Method)
+	// Create an authenticated subrouter
+	a := m.PathPrefix("").Subrouter()
+	a.Use(mux.MiddlewareFunc(authMiddlewareFunc))
+
+	// Range over routes and register them
+	for _, route := range routes {
+		// If the route is supposed to be authenticated, use auth mux
+		r := m
+		if route.Authenticate {
+			r = a
+		}
+		// Register the route
+		r.HandleFunc(route.GetPattern(), route.HandlerFunc).
+			Methods(route.Method)
 	}
 
 	// Set up pre handler middlewares

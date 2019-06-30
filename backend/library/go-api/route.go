@@ -7,10 +7,11 @@ import (
 
 // Route represents a standard route object
 type Route struct {
-	Method      string
-	Version     int
-	Path        string
-	HandlerFunc http.HandlerFunc
+	Method       string
+	Version      int
+	Path         string
+	HandlerFunc  http.HandlerFunc
+	Authenticate bool
 }
 
 // GetPattern returns the url match pattern for the route
