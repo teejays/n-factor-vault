@@ -15,18 +15,26 @@ const (
 func GetRoutes() []api.Route {
 
 	routes := []api.Route{
+		// Ping Handler
 		{
 			Method:      http.MethodGet,
 			Version:     ver1,
 			Path:        "ping",
-			HandlerFunc: PingHandler,
+			HandlerFunc: HandlePingRequest,
+		},
+		// Login Handler
+		{
+			Method:      http.MethodPost,
+			Version:     ver1,
+			Path:        "login",
+			HandlerFunc: HandleLogin,
 		},
 	}
 
 	return routes
 }
 
-// PingHandler reponds with pong
-func PingHandler(w http.ResponseWriter, r *http.Request) {
+// HandlePingRequest reponds with pong
+func HandlePingRequest(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte(`Pong!`))
 }
