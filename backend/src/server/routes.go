@@ -30,6 +30,13 @@ func GetRoutes() []api.Route {
 			HandlerFunc:  HandlePingRequest,
 			Authenticate: true,
 		},
+		// Signup Handler
+		{
+			Method:      http.MethodPost,
+			Version:     ver1,
+			Path:        "signup",
+			HandlerFunc: HandleSignup,
+		},
 		// Login Handler
 		{
 			Method:      http.MethodPost,

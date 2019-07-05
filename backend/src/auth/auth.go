@@ -9,7 +9,9 @@ import (
 
 	"github.com/teejays/clog"
 	jwt "github.com/teejays/go-jwt"
+
 	"github.com/teejays/n-factor-vault/backend/library/go-api"
+	"github.com/teejays/n-factor-vault/backend/src/user"
 )
 
 const sampleSecretKey = "I am a secret key"
@@ -37,7 +39,7 @@ func init() {
 
 // LoginCredentials represents user creds for logging in
 type LoginCredentials struct {
-	Username string `json:"username"`
+	Email    string `json:"email"`
 	Password string `json:"password"`
 }
 
@@ -46,36 +48,43 @@ type LoginResponse struct {
 	JWT string
 }
 
+var ErrInvalidCredentails = fmt.Errorf("login credentials are invalid")
+
 // Login authenticates user login credentials and returns an auth token if login is successful
 func Login(creds LoginCredentials) (LoginResponse, error) {
 	var resp LoginResponse
 
-	// Get user by username
-	// TODO: Call the user service to actually get the user object
-	var user interface{}
+	if strings.TrimSpace(creds.Email) == "" {
+		return resp, fmt.Errorf("no email provided")
+	}
+	if strings.TrimSpace(creds.Password) == "" {
+		return resp, fmt.Errorf("no password provided")
+	}
 
-	// Validate password
-	err := validateCredentails(user, creds)
+	// Get user by email
+	u, err := user.GetSecureUserByEmail(creds.Email)
 	if err != nil {
 		return resp, err
 	}
+	if u == nil {
+		clog.Warnf("auth: no user found with email %s", creds.Email)
+		return resp, ErrInvalidCredentails
+	}
+
+	// Validate password
+	isValid := u.SecurePassword.ValidatePassword(creds.Password)
+	if !isValid {
+		return resp, ErrInvalidCredentails
+	}
 
 	// Generate the token
-	token, err := generateToken(user)
+	token, err := generateToken(u.User)
 	if err != nil {
 		return resp, err
 	}
 
 	resp.JWT = token
 	return resp, nil
-
-}
-
-// validateCredentails takes user credentials and validate the credentails
-func validateCredentails(user interface{}, creds LoginCredentials) error {
-
-	// TODO: We do not have the database or the user service setup yet, so let's just validate by default
-	return nil
 
 }
 
@@ -86,7 +95,7 @@ type JWTClaim struct {
 }
 
 // generateToken creates and returns an authentication token for the user
-func generateToken(user interface{}) (string, error) {
+func generateToken(u user.User) (string, error) {
 
 	// Get the JWT client and create a token
 	cl, err := jwt.GetClient()
@@ -95,7 +104,7 @@ func generateToken(user interface{}) (string, error) {
 	}
 
 	payloadData := JWTClaim{
-		UserID: "1",
+		UserID: u.ID,
 	}
 
 	payload := jwt.NewBasicPayload(payloadData)
