@@ -1,6 +1,5 @@
 PROJECT_NAME=monoservice
 
-
 ## PROJECT SETUP
 init: dev-db-setup
 
@@ -20,11 +19,15 @@ dev-bin-build:
 	$(GO_BUILD) -o $(BIN_NAME) main.go 
 
 dev-bin-run: dev-bin-build
-	./$(BIN_NAME)
+	$(ENV_VARS) ./$(BIN_NAME)
 
 ## DATABASE
 DEV_DB_DIR=../../data
-DB_NAME=nfactorvault
+DEV_DB_NAME=nfactorvault
+DEV_DB_PORT=5432
+DEV_DB_HOST=localhost
+
+DB_ENV_VARS=POSTGRES_PORT=$(DEV_DB_PORT) POSTGRES_HOST=$(DEV_DB_HOST) POSTGRES_DBNAME=$(DEV_DB_NAME)
 
 dev-db-start: dev-db-start-bg
 
@@ -44,5 +47,8 @@ dev-db-start-bg:
 	pg_ctl -D $(DEV_DB_DIR) -l $(DEV_DB_DIR)/postgres.log start
 
 dev-db-start-fg:
-	postgres -D $(DEV_DB_DIR)
+	postgres -D $(DEV_DB_DIR) -p $(DEV_DB_PORT) -h $(DEV_DB_HOST)
 
+
+## ENV Variables
+ENV_VARS=ENV=DEV $(DB_ENV_VARS)

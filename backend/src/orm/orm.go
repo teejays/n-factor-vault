@@ -4,6 +4,9 @@ package orm
 
 import (
 	"fmt"
+	"os"
+	"reflect"
+	"strings"
 
 	"github.com/go-xorm/xorm"
 	"github.com/google/uuid"
@@ -12,21 +15,70 @@ import (
 	// this is needed to support postgres connection
 	_ "github.com/lib/pq"
 	"github.com/teejays/clog"
+	"github.com/teejays/n-factor-vault/backend/src/env"
 )
 
 var gEngine *xorm.Engine
-
-var sampleDriverName = "postgres"
-var sampleDataSource = "postgres://localhost:5432/nfactorvault?sslmode=disable"
+var gDriverName = "postgres"
 
 func init() {
-	var err error
-	gEngine, err = xorm.NewEngine(sampleDriverName, sampleDataSource)
+	err := initEngine()
 	if err != nil {
 		clog.Fatalf("Could not get up new xorm.Engine: %v", err)
 	}
-	gEngine.ShowSQL(true)
-	gEngine.Logger().SetLevel(core.LOG_DEBUG)
+}
+
+func initEngine() error {
+
+	connStr, err := getPostgresConnectionString()
+	if err != nil {
+		return err
+	}
+	clog.Debugf("xorm -> Postgres: connection string: %s", connStr)
+
+	gEngine, err = xorm.NewEngine(gDriverName, connStr)
+	if err != nil {
+		return err
+	}
+
+	// Only set these settings if DEV
+	if env.GetEnv() == env.DEV {
+		gEngine.ShowSQL(true)
+		gEngine.Logger().SetLevel(core.LOG_DEBUG)
+	}
+
+	return nil
+}
+
+func getPostgresConnectionString() (string, error) {
+
+	// Get the port
+	port, err := env.GetEnvVarInt("POSTGRES_PORT")
+	if err != nil {
+		return "", err
+	}
+
+	// Get the host
+	host, err := env.GetEnvVar("POSTGRES_HOST")
+	if err != nil {
+		return "", err
+	}
+
+	// Get the database name
+	dbName, err := env.GetEnvVar("POSTGRES_DBNAME")
+	if err != nil {
+		return "", err
+	}
+
+	return fmt.Sprintf("postgres://%s:%d/%s?sslmode=disable", host, port, dbName), nil
+}
+
+func getEnvVar(key string) (string, error) {
+	val := os.Getenv(key)
+	if strings.TrimSpace(val) == "" {
+		return "", fmt.Errorf("env variable %s is not set or is empty", key)
+	}
+	return val, nil
 }
 
 func errWithContext(err error) error {
@@ -36,8 +88,8 @@ func errWithContext(err error) error {
 	return err
 }
 
-func SyncModelSchema(v interface{}) error {
-
+func RegisterModel(v interface{}) error {
+	clog.Debugf("orm: syncing DB with type %v", reflect.TypeOf(v))
 	// TODO: Do we need to ensure that v is of type pointer?
 	err := gEngine.Sync2(v)
 	if err != nil {

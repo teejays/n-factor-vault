@@ -23,9 +23,14 @@ type UserSecure struct {
 	password.SecurePassword `xorm:"extends"`
 }
 
+// TableName overrides the name of the SQL table that should be used for this type
+func (UserSecure) TableName() string {
+	return "users"
+}
+
 func init() {
 	// 1. Setup User ORM Model
-	err := orm.SyncModelSchema(&UserSecure{})
+	err := orm.RegisterModel(&UserSecure{})
 	if err != nil {
 		clog.FatalErr(err)
 	}
