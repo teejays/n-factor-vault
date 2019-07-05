@@ -9,7 +9,7 @@ all: build dev-run
 
 build: dev-bin-build
 	
-dev-run: dev-db-start dev-bin-run
+dev-run: dev-db-stop dev-db-start dev-bin-run
 
 ## BINARY
 BIN_NAME=$(PROJECT_NAME).bin
@@ -29,7 +29,7 @@ DB_NAME=nfactorvault
 dev-db-start: dev-db-start-bg
 
 dev-db-stop:
-	pg_ctl -D $(DEV_DB_DIR) -l $(DEV_DB_DIR)/postgres.log stop
+	-pg_ctl -D $(DEV_DB_DIR) -l $(DEV_DB_DIR)/postgres.log stop
 
 
 dev-db-setup:

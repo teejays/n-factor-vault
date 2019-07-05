@@ -11,7 +11,29 @@ import (
 // StartServer initializes and runs the HTTP server
 func StartServer(addr string, port int, routes []Route, authMiddlewareFunc MiddlewareFunc, preMiddlewareFuncs, postMiddlewareFuncs []MiddlewareFunc) error {
 
-	// Start the router
+	m, err := GetHandler(routes, authMiddlewareFunc, preMiddlewareFuncs, postMiddlewareFuncs)
+	if err != nil {
+		return fmt.Errorf("could not setup the http handler: %c", err)
+	}
+
+	http.Handle("/", m)
+
+	// Start the server
+	clog.Infof("HTTP Server listenining on: %s:%d", addr, port)
+
+	err = http.ListenAndServe(fmt.Sprintf("%s:%d", addr, port), nil)
+	if err != nil {
+		return fmt.Errorf("HTTP Server failed to start or continue running: %v", err)
+	}
+
+	return nil
+
+}
+
+// GetHandler constructs a HTTP handler with all the routes and midlleware funcs configured
+func GetHandler(routes []Route, authMiddlewareFunc MiddlewareFunc, preMiddlewareFuncs, postMiddlewareFuncs []MiddlewareFunc) (http.Handler, error) {
+
+	// Initiate a router
 	m := mux.NewRouter()
 
 	// Register routes to the handler
@@ -41,13 +63,7 @@ func StartServer(addr string, port int, routes []Route, authMiddlewareFunc Middl
 		m.Use(mux.MiddlewareFunc(mw))
 	}
 
-	http.Handle("/", m)
-
-	// Start the server
-	clog.Infof("Listenining on: %s:%d", addr, port)
-
-	return http.ListenAndServe(fmt.Sprintf("%s:%d", addr, port), nil)
-
+	return m, nil
 }
 
 // MiddlewareFunc can be inserted in a server for processing
