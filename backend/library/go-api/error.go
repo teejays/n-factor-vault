@@ -13,6 +13,9 @@ type Error struct {
 // ErrMessageClean is an error message that can be used for clients to hide technical details of the error
 var ErrMessageClean = "There was an issue processing the request. Please see the logs."
 
+// ErrEmptyBody is used when we expect to receive a request with some body buy we don't
+var ErrEmptyBody = fmt.Errorf("no content provided with the HTTP request")
+
 // Error method makes handler.Error implement golang's error interface
 func (e Error) Error() string {
 	return fmt.Sprintf("Error Code %d: %s", e.Code, e.Message)

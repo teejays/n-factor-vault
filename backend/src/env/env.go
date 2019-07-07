@@ -13,6 +13,7 @@ const (
 	DEV int = iota
 	STG
 	PROD
+	TEST
 )
 
 // GetEnv returns the DEV/STG/PROD environment that the code is running in.
@@ -32,6 +33,9 @@ func GetEnv() int {
 	}
 	if v == "dev" || v == "development" {
 		return DEV
+	}
+	if v == "test" || v == "testing" {
+		return TEST
 	}
 	return defaultEnv
 }
@@ -56,4 +60,36 @@ func GetEnvVarInt(k string) (int, error) {
 		return 0, fmt.Errorf("could not convert %s to int: %v", k, err)
 	}
 	return val, nil
+}
+
+func SetEnvVars(vars map[string]string) error {
+	for k, v := range vars {
+		clog.Debugf("orm: Setting env var %s to %s", k, v)
+		if err := os.Setenv(k, v); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func SetEnvVarsMust(vars map[string]string) {
+	if err := SetEnvVars(vars); err != nil {
+		clog.Fatalf("could not set env vars: %v", err)
+	}
+}
+
+func UnsetEnvVars(vars map[string]string) error {
+	for k := range vars {
+		clog.Debugf("orm: Unetting env var %s", k)
+		if err := os.Unsetenv(k); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func UnsetEnvVarsMust(vars map[string]string) {
+	if err := UnsetEnvVars(vars); err != nil {
+		clog.Fatalf("could not unset env variables at the end of test: %v", err)
+	}
 }

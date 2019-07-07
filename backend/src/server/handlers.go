@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"net/http"
 
+	"github.com/teejays/clog"
 	api "github.com/teejays/n-factor-vault/backend/library/go-api"
 	"github.com/teejays/n-factor-vault/backend/src/auth"
 	"github.com/teejays/n-factor-vault/backend/src/user"
@@ -52,6 +53,12 @@ func HandleSignup(w http.ResponseWriter, r *http.Request) {
 	}
 	defer r.Body.Close()
 
+	clog.Debugf("Content Body: %+v", body)
+	if len(body) < 1 {
+		api.WriteError(w, http.StatusBadRequest, api.ErrEmptyBody, false)
+		return
+	}
+
 	// Unmarshal JSON into Go type
 	var req user.CreateUserRequest
 	err = json.Unmarshal(body, &req)
@@ -81,6 +88,11 @@ func HandleCreateVault(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer r.Body.Close()
+
+	if len(body) < 1 {
+		api.WriteError(w, http.StatusBadRequest, api.ErrEmptyBody, false)
+		return
+	}
 
 	// Unmarshal JSON into Go type
 	var req vault.CreateVaultRequest

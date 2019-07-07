@@ -6,51 +6,18 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
-	"os"
-	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/teejays/clog"
 	api "github.com/teejays/n-factor-vault/backend/library/go-api"
 )
 
-var testEnvVariables = map[string]string{
-	"ENV":           "testing",
-	"POSTGRES_PORT": "5432",
-	"POSTGRES_HOST": "localhost",
-}
-
-func setEnvVars(vars map[string]string) error {
-	for k, v := range vars {
-		if err := os.Setenv(k, v); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func unsetEnvVars(vars map[string]string) error {
-	for k := range vars {
-		if err := os.Unsetenv(k); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func unsetEnvVarsMust(t *testing.T, vars map[string]string) {
-	if err := unsetEnvVars(testEnvVariables); err != nil {
-		t.Fatalf("could not unset env variables at the end of test: %v", err)
-	}
+func init() {
+	clog.LogLevel = 0
 }
 
 func TestHandleSignup(t *testing.T) {
-
-	// Set the ENV vars for this test
-	if err := setEnvVars(testEnvVariables); err != nil {
-		t.Error(err)
-	}
-	defer unsetEnvVarsMust(t, testEnvVariables)
 
 	tests := []struct {
 		name           string
@@ -65,7 +32,7 @@ func TestHandleSignup(t *testing.T) {
 			content:        "",
 			wantStatusCode: http.StatusBadRequest,
 			wantContent:    "",
-			wantErrMessage: "empty body",
+			wantErrMessage: "no content provided with the HTTP request",
 		},
 	}
 	for _, tt := range tests {
@@ -77,7 +44,7 @@ func TestHandleSignup(t *testing.T) {
 			var w = httptest.NewRecorder()
 
 			// Call the Handler
-			HandleLogin(w, r)
+			HandleSignup(w, r)
 
 			// Verify the respoonse
 			assert.Equal(t, tt.wantStatusCode, w.Code)
@@ -97,7 +64,7 @@ func TestHandleSignup(t *testing.T) {
 					t.Error(err)
 				}
 				assert.Equal(t, tt.wantStatusCode, int(errH.Code))
-				assert.True(t, strings.Contains(errH.Message, tt.wantErrMessage))
+				assert.Contains(t, errH.Message, tt.wantErrMessage)
 
 			}
 
