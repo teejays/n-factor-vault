@@ -37,6 +37,7 @@ func EndTestSession() error {
 
 func EmptyTable(table string) (int, error) {
 	table = fmt.Sprintf("%s%s", gTableNamePrefix, table)
+	clog.Warnf("orm: emptying table %s", table)
 	result, err := gEngine.Exec(fmt.Sprintf("DELETE FROM %s WHERE 1=1", table))
 	if err != nil {
 		return -1, err

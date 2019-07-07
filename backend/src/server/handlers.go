@@ -12,36 +12,6 @@ import (
 	"github.com/teejays/n-factor-vault/backend/src/vault"
 )
 
-// HandleLogin handles the login API requests
-func HandleLogin(w http.ResponseWriter, r *http.Request) {
-
-	// Read the HTTP request body
-	body, err := ioutil.ReadAll(r.Body)
-	if err != nil {
-		api.WriteError(w, http.StatusBadRequest, err, false, nil)
-		return
-	}
-	defer r.Body.Close()
-
-	// Unmarshal JSON into Go type
-	var creds auth.LoginCredentials
-	err = json.Unmarshal(body, &creds)
-	if err != nil {
-		api.WriteError(w, http.StatusBadRequest, err, false, nil)
-		return
-	}
-
-	// Attempt login and get the token
-	resp, err := auth.Login(creds)
-	if err != nil {
-		api.WriteError(w, http.StatusBadRequest, err, false, nil)
-		return
-	}
-
-	api.WriteResponse(w, http.StatusOK, resp)
-
-}
-
 // HandleSignup handles the Signup API requests
 func HandleSignup(w http.ResponseWriter, r *http.Request) {
 
@@ -53,7 +23,7 @@ func HandleSignup(w http.ResponseWriter, r *http.Request) {
 	}
 	defer r.Body.Close()
 
-	clog.Debugf("Content Body: %+v", body)
+	clog.Debugf("Content Body: %+v", string(body))
 	if len(body) < 1 {
 		api.WriteError(w, http.StatusBadRequest, api.ErrEmptyBody, false, nil)
 		return
@@ -74,7 +44,42 @@ func HandleSignup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	api.WriteResponse(w, http.StatusOK, u)
+	api.WriteResponse(w, http.StatusCreated, u)
+
+}
+
+// HandleLogin handles the login API requests
+func HandleLogin(w http.ResponseWriter, r *http.Request) {
+
+	// Read the HTTP request body
+	body, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		api.WriteError(w, http.StatusBadRequest, err, false, nil)
+		return
+	}
+	defer r.Body.Close()
+
+	if len(body) < 1 {
+		api.WriteError(w, http.StatusBadRequest, api.ErrEmptyBody, false, nil)
+		return
+	}
+
+	// Unmarshal JSON into Go type
+	var creds auth.LoginCredentials
+	err = json.Unmarshal(body, &creds)
+	if err != nil {
+		api.WriteError(w, http.StatusBadRequest, err, true, api.ErrInvalidJSON)
+		return
+	}
+
+	// Attempt login and get the token
+	resp, err := auth.Login(creds)
+	if err != nil {
+		api.WriteError(w, http.StatusBadRequest, err, false, nil)
+		return
+	}
+
+	api.WriteResponse(w, http.StatusOK, resp)
 
 }
 

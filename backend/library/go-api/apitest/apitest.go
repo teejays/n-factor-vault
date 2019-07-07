@@ -3,6 +3,7 @@ package apitest
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
@@ -37,10 +38,52 @@ type HandlerTest struct {
 	Content             string
 	WantStatusCode      int
 	WantContent         string
+	WantErr             bool
 	WantErrMessage      string
 	AssertContentFields map[string]AssertFunc
 	BeforeRunFunc       func(*testing.T)
 	AfterRunFunc        func(*testing.T)
+	SkipBeforeTestFunc  bool
+	SkipAfterTestFunc   bool
+}
+
+type HandlerReqParams struct {
+	Route               string
+	Method              string
+	Content             string
+	HandlerFunc         http.HandlerFunc
+	AcceptedStatusCodes []int
+}
+
+func MakeHandlerRequest(p HandlerReqParams) (*http.Response, []byte, error) {
+	// Create the HTTP request and response
+	var buff = bytes.NewBufferString(p.Content)
+	var r = httptest.NewRequest(p.Method, p.Route, buff)
+	var w = httptest.NewRecorder()
+
+	// Call the Handler
+	p.HandlerFunc(w, r)
+
+	resp := w.Result()
+
+	defer resp.Body.Close()
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return resp, body, err
+	}
+
+	// Check if the response status is one of the accepted ones
+	if len(p.AcceptedStatusCodes) > 0 {
+		var statusMap = make(map[int]bool)
+		for _, status := range p.AcceptedStatusCodes {
+			statusMap[status] = true
+		}
+		if v, hasKey := statusMap[w.Code]; !hasKey || !v {
+			return resp, body, fmt.Errorf("apitest: handler request to %s resulted in a unaccepteable %d status:\n%s", p.Route, w.Code, string(body))
+		}
+	}
+
+	return resp, body, nil
 }
 
 func (ts TestSuite) RunHandlerTests(t *testing.T, tests []HandlerTest) {
@@ -53,7 +96,7 @@ func (ts TestSuite) RunHandlerTests(t *testing.T, tests []HandlerTest) {
 func (ts TestSuite) RunHandlerTest(t *testing.T, tt HandlerTest) {
 
 	// Run BeforeRunFuncs
-	if ts.BeforeTestFunc != nil {
+	if ts.BeforeTestFunc != nil && !tt.SkipBeforeTestFunc {
 		ts.BeforeTestFunc(t)
 	}
 
@@ -62,35 +105,39 @@ func (ts TestSuite) RunHandlerTest(t *testing.T, tt HandlerTest) {
 	}
 
 	// Create the HTTP request and response
-	var buff = bytes.NewBufferString(tt.Content)
-	var r = httptest.NewRequest(http.MethodPost, ts.Route, buff)
-	var w = httptest.NewRecorder()
-
-	// Call the Handler
-	ts.HandlerFunc(w, r)
+	hreq := HandlerReqParams{
+		ts.Route,
+		ts.Method,
+		tt.Content,
+		ts.HandlerFunc,
+		[]int{tt.WantStatusCode},
+	}
+	resp, body, err := MakeHandlerRequest(hreq)
+	assert.NoError(t, err)
 
 	// Verify the respoonse
-	assert.Equal(t, tt.WantStatusCode, w.Code)
+	assert.Equal(t, tt.WantStatusCode, resp.StatusCode)
 
-	resp := w.Result()
-	defer resp.Body.Close()
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		t.Error(err)
+	if tt.WantContent != "" {
+		assert.Equal(t, tt.WantContent, string(body))
 	}
 
-	if tt.WantErrMessage != "" {
+	if tt.WantErrMessage != "" || tt.WantErr {
 		var errH api.Error
 		err = json.Unmarshal(body, &errH)
 		if err != nil {
 			t.Error(err)
 		}
 		assert.Equal(t, tt.WantStatusCode, int(errH.Code))
-		assert.Contains(t, errH.Message, tt.WantErrMessage)
-	}
 
-	if tt.WantContent != "" {
-		assert.Equal(t, tt.WantContent, string(body))
+		if tt.WantErr {
+			assert.NotEmpty(t, errH.Message)
+		}
+
+		if tt.WantErrMessage != "" {
+			assert.Contains(t, errH.Message, tt.WantErrMessage)
+		}
+
 	}
 
 	// Run the individual assert functions for each of the field in the HTTP response body
@@ -116,7 +163,7 @@ func (ts TestSuite) RunHandlerTest(t *testing.T, tt HandlerTest) {
 		tt.AfterRunFunc(t)
 	}
 
-	if ts.AfterTestFunc != nil {
+	if ts.AfterTestFunc != nil && !tt.SkipAfterTestFunc {
 		ts.AfterTestFunc(t)
 	}
 
