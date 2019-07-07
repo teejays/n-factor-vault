@@ -11,7 +11,7 @@ type Error struct {
 }
 
 // ErrMessageClean is an error message that can be used for clients to hide technical details of the error
-var ErrMessageClean = "There was an issues processing the request. Please see the logs."
+var ErrMessageClean = "There was an issue processing the request. Please see the logs."
 
 // Error method makes handler.Error implement golang's error interface
 func (e Error) Error() string {

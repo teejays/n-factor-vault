@@ -11,6 +11,7 @@ import (
 	jwt "github.com/teejays/go-jwt"
 
 	"github.com/teejays/n-factor-vault/backend/library/go-api"
+	"github.com/teejays/n-factor-vault/backend/src/orm"
 	"github.com/teejays/n-factor-vault/backend/src/user"
 )
 
@@ -20,9 +21,9 @@ const authExpiryDuration = 48 * time.Hour
 // Keys for storing auth information in http.Request context
 type contextKey string
 
-const ctxKeyToken = contextKey("jwt_token")
-const ctxKeyUserID = contextKey("jwt_userid")
-const ctxKeyIsAuthenticated = contextKey("is_authenticated")
+const gCtxKeyToken = contextKey("jwt_token")
+const gCtxKeyUserID = contextKey("jwt_userid")
+const gCtxKeyIsAuthenticated = contextKey("is_authenticated")
 
 // init initializes the JWT client
 func init() {
@@ -90,8 +91,8 @@ func Login(creds LoginCredentials) (LoginResponse, error) {
 
 // JWTClaim is the data that will be stored in the JWT token
 type JWTClaim struct {
-	UserID string `json:"uid"`
-	jwt.BasicPayload
+	jwt.BaseClaim
+	UserID orm.ID `json:"uid"`
 }
 
 // generateToken creates and returns an authentication token for the user
@@ -103,13 +104,9 @@ func generateToken(u user.User) (string, error) {
 		return "", err
 	}
 
-	payloadData := JWTClaim{
-		UserID: u.ID,
-	}
+	claim := JWTClaim{UserID: u.ID}
 
-	payload := jwt.NewBasicPayload(payloadData)
-
-	token, err := cl.CreateToken(payload)
+	token, err := cl.CreateToken(&claim)
 	if err != nil {
 		return "", fmt.Errorf("error creating JWT token: %v", err)
 	}
@@ -137,14 +134,20 @@ func AuthenticateRequestMiddleware(next http.Handler) http.Handler {
 		claim, err := getJWTClaimFromToken(token)
 		if err != nil {
 			api.WriteError(w, http.StatusUnauthorized, err, false)
+			return
 		}
 
+		if claim.UserID.IsEmpty() {
+			clog.Errorf("auth: middleware: got an empty userID from a verified jwt token")
+			api.WriteError(w, http.StatusInternalServerError, fmt.Errorf(api.ErrMessageClean), false)
+			return
+		}
 		// Authentication succesful
 		// Add the authentication payload to the context
 		ctx := r.Context()
-		ctx = context.WithValue(ctx, ctxKeyIsAuthenticated, true)
-		ctx = context.WithValue(ctx, ctxKeyToken, token)
-		ctx = context.WithValue(ctx, ctxKeyUserID, claim.UserID)
+		ctx = context.WithValue(ctx, gCtxKeyIsAuthenticated, true)
+		ctx = context.WithValue(ctx, gCtxKeyToken, token)
+		ctx = context.WithValue(ctx, gCtxKeyUserID, claim.UserID)
 
 		// Add the updated context to http.Request
 		r = r.WithContext(ctx)
@@ -191,5 +194,103 @@ func getJWTClaimFromToken(token string) (JWTClaim, error) {
 		return claim, err
 	}
 
+	clog.Debugf("auth: verified claim from token:\n%+v", claim)
+
 	return claim, nil
 }
+
+// GetUserFromContext returns the user instance of the authenticated user using the information in the context
+func GetUserFromContext(ctx context.Context) (*user.User, error) {
+	if !IsContextAuthenticated(ctx) {
+		return nil, ErrNotAuthenticated
+	}
+
+	clog.Debug("auth: Getting User from Context")
+
+	// Check the value of userID in context
+	v := ctx.Value(gCtxKeyUserID)
+	if v == nil {
+		return nil, ErrNotAuthenticated
+	}
+	userID, ok := v.(orm.ID)
+	if !ok {
+		clog.Errorf("auth: gCtxKeyUserID value in context cannot be converted to orm.ID: %v", v)
+		return nil, ErrNotAuthenticated
+	}
+	if userID == "" {
+		return nil, ErrNotAuthenticated
+	}
+
+	// Get the User
+	u, err := user.GetUserByID(userID)
+	if err != nil {
+		return nil, err
+	}
+
+	return u, nil
+
+}
+
+// IsContextAuthenticated takes a context and returns true if it is authenticated
+func IsContextAuthenticated(ctx context.Context) bool {
+
+	clog.Debug("auth: IsContextAuthenticated")
+
+	// Not authenticated if the request itself is nil
+	if ctx == nil {
+		return false
+	}
+
+	// Check the value isAuthenticated in context
+	clog.Debug("auth: IsContextAuthenticated: getting 'isAuthenticated' value from context")
+	v1 := ctx.Value(gCtxKeyIsAuthenticated)
+	if v1 == nil {
+		return false
+	}
+	isAuthenticated, ok := v1.(bool)
+	if !ok {
+		clog.Errorf("auth: gCtxKeyIsAuthenticated value in context cannot be converted to bool: %v", v1)
+		return false
+	}
+	if !isAuthenticated {
+		return false
+	}
+
+	// Check the value of userID in context
+	clog.Debug("auth: IsContextAuthenticated: getting 'userID' value from context")
+	v2 := ctx.Value(gCtxKeyUserID)
+	if v2 == nil {
+		clog.Warn("auth: IsContextAuthenticated: gCtxKeyUserID is nil in context")
+		return false
+	}
+	userID, ok := v2.(orm.ID)
+	if !ok {
+		clog.Errorf("auth: gCtxKeyUserID value in context cannot be converted to orm.ID: %v", v2)
+		return false
+	}
+	if userID == "" {
+		clog.Warnf("auth: IsContextAuthenticated: gCtxKeyUserID is empty in context, %v", v2)
+		return false
+	}
+
+	// Make sure we have a JWT token
+	clog.Debug("auth: IsContextAuthenticated: getting 'token' value from context")
+	v3 := ctx.Value(gCtxKeyToken)
+	if v2 == nil {
+		return false
+	}
+	token, ok := v3.(string)
+	if !ok {
+		clog.Errorf("auth: gCtxKeyToken value in context cannot be converted to string: %v", v3)
+		return false
+	}
+	if token == "" {
+		return false
+	}
+
+	return true
+
+}
+
+// ErrNotAuthenticated is returned when a request or context is not authenticated
+var ErrNotAuthenticated = fmt.Errorf("not authenticated")

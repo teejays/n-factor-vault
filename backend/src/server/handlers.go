@@ -8,6 +8,7 @@ import (
 	api "github.com/teejays/n-factor-vault/backend/library/go-api"
 	"github.com/teejays/n-factor-vault/backend/src/auth"
 	"github.com/teejays/n-factor-vault/backend/src/user"
+	"github.com/teejays/n-factor-vault/backend/src/vault"
 )
 
 // HandleLogin handles the login API requests
@@ -67,5 +68,35 @@ func HandleSignup(w http.ResponseWriter, r *http.Request) {
 	}
 
 	api.WriteResponse(w, http.StatusOK, u)
+
+}
+
+// HandleCreateVault creates a new vault for the authenticated user
+func HandleCreateVault(w http.ResponseWriter, r *http.Request) {
+
+	// Read the HTTP request body
+	body, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		api.WriteError(w, http.StatusBadRequest, err, false)
+		return
+	}
+	defer r.Body.Close()
+
+	// Unmarshal JSON into Go type
+	var req vault.CreateVaultRequest
+	err = json.Unmarshal(body, &req)
+	if err != nil {
+		api.WriteError(w, http.StatusBadRequest, err, false)
+		return
+	}
+
+	// Attempt login and get the token
+	v, err := vault.CreateVault(r.Context(), req)
+	if err != nil {
+		api.WriteError(w, http.StatusBadRequest, err, false)
+		return
+	}
+
+	api.WriteResponse(w, http.StatusOK, v)
 
 }

@@ -9,7 +9,7 @@ import (
 )
 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-* O R M   M O D E L
+* O R M   M O D E L S
 * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 type User struct {
@@ -21,11 +21,6 @@ type User struct {
 type UserSecure struct {
 	User                    `xorm:"extends"`
 	password.SecurePassword `xorm:"extends"`
-}
-
-// TableName overrides the name of the SQL table that should be used for this type
-func (UserSecure) TableName() string {
-	return "users"
 }
 
 func init() {
@@ -78,6 +73,22 @@ func CreateUser(req CreateUserRequest) (*User, error) {
 	}
 
 	return &u.User, nil
+}
+
+func GetUserByID(id orm.ID) (*User, error) {
+	var su UserSecure
+	exists, err := orm.GetByID(id, &su)
+	if err != nil {
+		return nil, err
+	}
+	if !exists {
+		clog.Warnf("user: no user found with id %v", id)
+		return nil, nil
+	}
+	if su.ID != id {
+		panic(fmt.Sprintf("user fetched by id (%v) has a different id (%v)", id, su.ID))
+	}
+	return &su.User, nil
 }
 
 func GetSecureUserByEmail(email string) (*UserSecure, error) {

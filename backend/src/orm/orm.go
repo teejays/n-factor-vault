@@ -4,9 +4,7 @@ package orm
 
 import (
 	"fmt"
-	"os"
 	"reflect"
-	"strings"
 
 	"github.com/go-xorm/xorm"
 	"github.com/google/uuid"
@@ -41,6 +39,10 @@ func initEngine() error {
 		return err
 	}
 
+	tbMapper := core.NewPrefixMapper(core.SnakeMapper{}, "tb_")
+	gEngine.SetTableMapper(tbMapper)
+	gEngine.SetColumnMapper(core.GonicMapper{})
+
 	// Only set these settings if DEV
 	if env.GetEnv() == env.DEV {
 		gEngine.ShowSQL(true)
@@ -73,14 +75,6 @@ func getPostgresConnectionString() (string, error) {
 	return fmt.Sprintf("postgres://%s:%d/%s?sslmode=disable", host, port, dbName), nil
 }
 
-func getEnvVar(key string) (string, error) {
-	val := os.Getenv(key)
-	if strings.TrimSpace(val) == "" {
-		return "", fmt.Errorf("env variable %s is not set or is empty", key)
-	}
-	return val, nil
-}
-
 func errWithContext(err error) error {
 	if err != nil {
 		err = fmt.Errorf("xorm error: %v", err)
@@ -91,7 +85,7 @@ func errWithContext(err error) error {
 func RegisterModel(v interface{}) error {
 	clog.Debugf("orm: syncing DB with type %v", reflect.TypeOf(v))
 	// TODO: Do we need to ensure that v is of type pointer?
-	err := gEngine.Sync2(v)
+	err := gEngine.Cascade(true).Sync2(v)
 	if err != nil {
 		return errWithContext(err)
 	}
@@ -100,17 +94,13 @@ func RegisterModel(v interface{}) error {
 
 var ErrNoRowsFound = fmt.Errorf("no rows found for the query")
 
-func GetById(id uuid.UUID, v interface{}, must bool) error {
+func GetByID(id ID, v interface{}) (bool, error) {
 	has, err := gEngine.Table(v).Where("id = ?", id).Get(v)
 	if err != nil {
-		return errWithContext(err)
+		return false, errWithContext(err)
 	}
 
-	if must && !has {
-		return errWithContext(ErrNoRowsFound)
-	}
-
-	return nil
+	return has, nil
 }
 
 func GetByColumn(columnName string, columnValue interface{}, v interface{}) (bool, error) {
@@ -135,4 +125,45 @@ func InsertOne(v interface{}) error {
 		return errWithContext(fmt.Errorf("expected %d rows to be inserted but got %d", 1, n))
 	}
 	return nil
+}
+
+func InsertTx(vs ...interface{}) (err error) {
+
+	clog.Debugf("Inserting:\n %+v\n", vs...)
+
+	sess := gEngine.NewSession()
+	defer sess.Close()
+
+	err = sess.Begin()
+	if err != nil {
+		return
+	}
+	defer func() {
+		if err != nil {
+			sess.Rollback()
+			return
+		}
+		err = sess.Commit()
+		if err != nil {
+			clog.Errorf("orm: error while committing insert transaction: %v\nRolling back transaction...", err)
+			sess.Rollback()
+			return
+		}
+	}()
+
+	n, err := sess.Insert(vs...)
+	if err != nil {
+		err = errWithContext(fmt.Errorf("could not save: %v\n%+v", err, vs))
+		return
+	}
+	if n != int64(len(vs)) {
+		// Case for panic?
+		err = errWithContext(fmt.Errorf("expected %d rows to be inserted but got %d", 1, n))
+		return
+	}
+	return
+}
+
+func GetNewID() ID {
+	return ID(uuid.New().String())
 }
