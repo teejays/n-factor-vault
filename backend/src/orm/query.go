@@ -3,6 +3,7 @@ package orm
 import (
 	"fmt"
 	"sync"
+	"testing"
 
 	"github.com/go-xorm/xorm"
 	"github.com/teejays/clog"
@@ -54,6 +55,12 @@ func EmptyTables(tables []string) error {
 		}
 	}
 	return nil
+}
+
+func EmptyTestTables(t *testing.T, tables []string) {
+	if err := EmptyTables(tables); err != nil {
+		t.Fatalf("error emptying tables: %v", err)
+	}
 }
 
 var ErrNoRowsFound = fmt.Errorf("no rows found for the query")

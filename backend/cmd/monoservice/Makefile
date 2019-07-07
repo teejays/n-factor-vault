@@ -25,8 +25,9 @@ dev-bin-build:
 dev-bin-run: dev-bin-build
 	$(DEV_ENV_VARS) ./$(BIN_NAME)
 
+# TEST - BACKEND CODE
 dev-bin-test-run:
-	$(DEV_ENV_TEST_VARS) $(GO) test -count=1 $(PATH_BACKEND_SRC)/...
+	$(DEV_ENV_TEST_VARS) $(GO) test -count=1 $(PATH_BACKEND)/...
 
 ## DATABASE
 DEV_DB_DIR=$(PATH_BACKEND)/data

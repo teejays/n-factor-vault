@@ -1,4 +1,4 @@
-package server_test
+package userapi_test
 
 import (
 	"net/http"
@@ -7,14 +7,8 @@ import (
 	"github.com/teejays/clog"
 	"github.com/teejays/n-factor-vault/backend/library/go-api/apitest"
 	"github.com/teejays/n-factor-vault/backend/src/orm"
-	"github.com/teejays/n-factor-vault/backend/src/server"
+	"github.com/teejays/n-factor-vault/backend/src/user/userapi"
 )
-
-func EmptyTestTables(t *testing.T, tables []string) {
-	if err := orm.EmptyTables(tables); err != nil {
-		t.Fatalf("error emptying tables: %v", err)
-	}
-}
 
 func init() {
 	clog.LogLevel = 8
@@ -40,13 +34,13 @@ func init() {
 func TestHandleSignup(t *testing.T) {
 
 	var relevantOrmTables = []string{"user_secure"}
-	defer EmptyTestTables(t, relevantOrmTables)
+	defer orm.EmptyTestTables(t, relevantOrmTables)
 
 	ts := apitest.TestSuite{
 		Route:         "/v1/signup",
 		Method:        http.MethodPost,
-		HandlerFunc:   server.HandleSignup,
-		AfterTestFunc: func(t *testing.T) { EmptyTestTables(t, relevantOrmTables) },
+		HandlerFunc:   userapi.HandleSignup,
+		AfterTestFunc: func(t *testing.T) { orm.EmptyTestTables(t, relevantOrmTables) },
 	}
 
 	tests := []apitest.HandlerTest{
@@ -123,7 +117,7 @@ func TestHandleLogin(t *testing.T) {
 
 	// Make sure that we empty any table that these tests might populate too
 	var relevantOrmTables = []string{"user_secure"}
-	defer EmptyTestTables(t, relevantOrmTables)
+	defer orm.EmptyTestTables(t, relevantOrmTables)
 
 	// A function to create a user
 	var signupUsers = func(t *testing.T) {
@@ -132,7 +126,7 @@ func TestHandleLogin(t *testing.T) {
 			Route:               "/v1/signup",
 			Method:              http.MethodPost,
 			Content:             `{"name":"Jon Doe", "email":"jon.doe@email.com","password":"jons_secret"}`,
-			HandlerFunc:         server.HandleSignup,
+			HandlerFunc:         userapi.HandleSignup,
 			AcceptedStatusCodes: []int{http.StatusCreated, http.StatusOK},
 		}
 		_, _, err := apitest.MakeHandlerRequest(hreq)
@@ -145,7 +139,7 @@ func TestHandleLogin(t *testing.T) {
 			Route:               "/v1/signup",
 			Method:              http.MethodPost,
 			Content:             `{"name":"Jane Does", "email":"jane.does@email.com","password":"janes_secret"}`,
-			HandlerFunc:         server.HandleSignup,
+			HandlerFunc:         userapi.HandleSignup,
 			AcceptedStatusCodes: []int{http.StatusCreated, http.StatusOK},
 		}
 		_, _, err = apitest.MakeHandlerRequest(hreq)
@@ -159,9 +153,9 @@ func TestHandleLogin(t *testing.T) {
 	ts := apitest.TestSuite{
 		Route:          "/v1/login",
 		Method:         http.MethodPost,
-		HandlerFunc:    server.HandleLogin,
+		HandlerFunc:    userapi.HandleLogin,
 		BeforeTestFunc: signupUsers,
-		AfterTestFunc:  func(t *testing.T) { EmptyTestTables(t, relevantOrmTables) },
+		AfterTestFunc:  func(t *testing.T) { orm.EmptyTestTables(t, relevantOrmTables) },
 	}
 
 	tests := []apitest.HandlerTest{

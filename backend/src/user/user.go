@@ -2,13 +2,12 @@ package user
 
 import (
 	"fmt"
+	"regexp"
 	"strings"
 
-	"github.com/badoux/checkmail"
-
 	"github.com/teejays/clog"
+	pwd "github.com/teejays/n-factor-vault/backend/library/go-pwd"
 	"github.com/teejays/n-factor-vault/backend/src/orm"
-	"github.com/teejays/n-factor-vault/backend/src/user/password"
 )
 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
@@ -22,8 +21,8 @@ type User struct {
 }
 
 type UserSecure struct {
-	User                    `xorm:"extends"`
-	password.SecurePassword `xorm:"extends"`
+	User               `xorm:"extends"`
+	pwd.SecurePassword `xorm:"extends"`
 }
 
 func init() {
@@ -62,8 +61,8 @@ func (r CreateUserRequest) Validate() error {
 		errs = append(errs, err)
 	}
 
-	err := checkmail.ValidateFormat(r.Email)
-	if err != nil {
+	emailRegexp := regexp.MustCompile("^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$")
+	if !emailRegexp.MatchString(r.Email) {
 		errs = append(errs, fmt.Errorf("email address has an invalid format"))
 	}
 
@@ -94,7 +93,7 @@ func CreateUser(req CreateUserRequest) (*User, error) {
 	u.Email = req.Email
 
 	// Get the password hash
-	u.SecurePassword, err = password.NewSecurePassword(req.Password)
+	u.SecurePassword, err = pwd.NewSecurePassword(req.Password)
 	if err != nil {
 		return nil, err
 	}
