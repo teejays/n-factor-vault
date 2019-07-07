@@ -13,18 +13,11 @@ import (
 	"github.com/teejays/n-factor-vault/backend/library/go-api"
 )
 
-type AssertFunc func(t *testing.T, v interface{})
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+* T E S T   S U I T E
+* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-var AssertIsEqual = func(expected interface{}) AssertFunc {
-	return func(t *testing.T, v interface{}) {
-		assert.Equal(t, expected, v)
-	}
-}
-
-var AssertNotEmptyFunc = func(t *testing.T, v interface{}) {
-	assert.NotEmpty(t, v)
-}
-
+// TestSuite defines a configuration that wraps a bunch of individual tests for a single HandlerFunc
 type TestSuite struct {
 	Route          string
 	Method         string
@@ -33,6 +26,7 @@ type TestSuite struct {
 	BeforeTestFunc func(*testing.T)
 }
 
+// HandlerTest defines configuration for a single test run for a HandlerFunc. It is run run as part of the TestSuite
 type HandlerTest struct {
 	Name                string
 	Content             string
@@ -47,45 +41,7 @@ type HandlerTest struct {
 	SkipAfterTestFunc   bool
 }
 
-type HandlerReqParams struct {
-	Route               string
-	Method              string
-	Content             string
-	HandlerFunc         http.HandlerFunc
-	AcceptedStatusCodes []int
-}
-
-func MakeHandlerRequest(p HandlerReqParams) (*http.Response, []byte, error) {
-	// Create the HTTP request and response
-	var buff = bytes.NewBufferString(p.Content)
-	var r = httptest.NewRequest(p.Method, p.Route, buff)
-	var w = httptest.NewRecorder()
-
-	// Call the Handler
-	p.HandlerFunc(w, r)
-
-	resp := w.Result()
-
-	defer resp.Body.Close()
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return resp, body, err
-	}
-
-	// Check if the response status is one of the accepted ones
-	if len(p.AcceptedStatusCodes) > 0 {
-		var statusMap = make(map[int]bool)
-		for _, status := range p.AcceptedStatusCodes {
-			statusMap[status] = true
-		}
-		if v, hasKey := statusMap[w.Code]; !hasKey || !v {
-			return resp, body, fmt.Errorf("apitest: handler request to %s resulted in a unaccepteable %d status:\n%s", p.Route, w.Code, string(body))
-		}
-	}
-
-	return resp, body, nil
-}
-
+// RunHandlerTests runs all the HandlerTests inside a testing.T.Run() loop
 func (ts TestSuite) RunHandlerTests(t *testing.T, tests []HandlerTest) {
 	for _, tt := range tests {
 		t.Run(tt.Name, func(t *testing.T) {
@@ -93,6 +49,8 @@ func (ts TestSuite) RunHandlerTests(t *testing.T, tests []HandlerTest) {
 		})
 	}
 }
+
+// RunHandlerTest run all the HandlerTest tt
 func (ts TestSuite) RunHandlerTest(t *testing.T, tt HandlerTest) {
 
 	// Run BeforeRunFuncs
@@ -108,11 +66,9 @@ func (ts TestSuite) RunHandlerTest(t *testing.T, tt HandlerTest) {
 	hreq := HandlerReqParams{
 		ts.Route,
 		ts.Method,
-		tt.Content,
 		ts.HandlerFunc,
-		[]int{tt.WantStatusCode},
 	}
-	resp, body, err := MakeHandlerRequest(hreq)
+	resp, body, err := MakeHandlerRequest(hreq, tt.Content, []int{tt.WantStatusCode})
 	assert.NoError(t, err)
 
 	// Verify the respoonse
@@ -167,4 +123,70 @@ func (ts TestSuite) RunHandlerTest(t *testing.T, tt HandlerTest) {
 		ts.AfterTestFunc(t)
 	}
 
+}
+
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+* A S S E R T   F U N C S
+* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+
+// AssertFunc is a function that takes the testing.T pointer, a value v, and asserts
+// whether v is good
+type AssertFunc func(t *testing.T, v interface{})
+
+// AssertIsEqual is a of type AssertFunc. It verifies that the value v is equal to the expected value.
+var AssertIsEqual = func(expected interface{}) AssertFunc {
+	return func(t *testing.T, v interface{}) {
+		assert.Equal(t, expected, v)
+	}
+}
+
+// AssertNotEmptyFunc is a of type AssertFunc. It verifies that the value v is not empty.
+var AssertNotEmptyFunc = func(t *testing.T, v interface{}) {
+	assert.NotEmpty(t, v)
+}
+
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+* H A N D L E R   R E Q U E S T
+* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+
+// HandlerReqParams define a set of configuration that allow us to make repeated calls to Handler
+type HandlerReqParams struct {
+	Route       string
+	Method      string
+	HandlerFunc http.HandlerFunc
+	// Content             string
+	// AcceptedStatusCodes []int
+}
+
+// MakeHandlerRequest makes an request to the handler specified in p, using the content. It errors if there is an
+// error making the request, or if the received status code is not among the accepted status codes
+func MakeHandlerRequest(p HandlerReqParams, content string, acceptedStatusCodes []int) (*http.Response, []byte, error) {
+	// Create the HTTP request and response
+	var buff = bytes.NewBufferString(content)
+	var r = httptest.NewRequest(p.Method, p.Route, buff)
+	var w = httptest.NewRecorder()
+
+	// Call the Handler
+	p.HandlerFunc(w, r)
+
+	resp := w.Result()
+
+	defer resp.Body.Close()
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return resp, body, err
+	}
+
+	// Check if the response status is one of the accepted ones
+	if len(acceptedStatusCodes) > 0 {
+		var statusMap = make(map[int]bool)
+		for _, status := range acceptedStatusCodes {
+			statusMap[status] = true
+		}
+		if v, hasKey := statusMap[w.Code]; !hasKey || !v {
+			return resp, body, fmt.Errorf("apitest: handler request to %s resulted in a unaccepteable %d status:\n%s", p.Route, w.Code, string(body))
+		}
+	}
+
+	return resp, body, nil
 }

@@ -121,28 +121,30 @@ func TestHandleLogin(t *testing.T) {
 
 	// A function to create a user
 	var signupUsers = func(t *testing.T) {
-		// - User 1
+
+		// Define the Handler Request to signup a user
 		hreq := apitest.HandlerReqParams{
-			Route:               "/v1/signup",
-			Method:              http.MethodPost,
-			Content:             `{"name":"Jon Doe", "email":"jon.doe@email.com","password":"jons_secret"}`,
-			HandlerFunc:         userapi.HandleSignup,
-			AcceptedStatusCodes: []int{http.StatusCreated, http.StatusOK},
+			Route:       "/v1/signup",
+			Method:      http.MethodPost,
+			HandlerFunc: userapi.HandleSignup,
 		}
-		_, _, err := apitest.MakeHandlerRequest(hreq)
+
+		// Create User 1
+		_, _, err := apitest.MakeHandlerRequest(
+			hreq,
+			`{"name":"Jon Doe", "email":"jon.doe@email.com","password":"jons_secret"}`,
+			[]int{http.StatusCreated, http.StatusOK},
+		)
 		if err != nil {
 			t.Fatal(err)
 		}
 
-		// - User 2
-		hreq = apitest.HandlerReqParams{
-			Route:               "/v1/signup",
-			Method:              http.MethodPost,
-			Content:             `{"name":"Jane Does", "email":"jane.does@email.com","password":"janes_secret"}`,
-			HandlerFunc:         userapi.HandleSignup,
-			AcceptedStatusCodes: []int{http.StatusCreated, http.StatusOK},
-		}
-		_, _, err = apitest.MakeHandlerRequest(hreq)
+		// Create User 2
+		_, _, err = apitest.MakeHandlerRequest(
+			hreq,
+			`{"name":"Jane Does", "email":"jane.does@email.com","password":"janes_secret"}`,
+			[]int{http.StatusCreated, http.StatusOK},
+		)
 		if err != nil {
 			t.Fatal(err)
 		}
