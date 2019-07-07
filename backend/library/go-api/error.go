@@ -13,8 +13,11 @@ type Error struct {
 // ErrMessageClean is an error message that can be used for clients to hide technical details of the error
 var ErrMessageClean = "There was an issue processing the request. Please see the logs."
 
-// ErrEmptyBody is used when we expect to receive a request with some body buy we don't
+// ErrEmptyBody is used when we expect to receive a request with some body but we don't
 var ErrEmptyBody = fmt.Errorf("no content provided with the HTTP request")
+
+// ErrInvalidJSON is used when we expect to receive a JSON request but we don't
+var ErrInvalidJSON = fmt.Errorf("content is not a valid JSON")
 
 // Error method makes handler.Error implement golang's error interface
 func (e Error) Error() string {

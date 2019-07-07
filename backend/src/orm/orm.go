@@ -7,16 +7,18 @@ import (
 	"reflect"
 
 	"github.com/go-xorm/xorm"
+	"github.com/teejays/clog"
 	"xorm.io/core"
 
 	// this is needed to support postgres connection
 	_ "github.com/lib/pq"
-	"github.com/teejays/clog"
+
 	"github.com/teejays/n-factor-vault/backend/src/env"
 )
 
 var gEngine *xorm.Engine
 var gDriverName = "postgres"
+var gTableNamePrefix = "tb_"
 
 func init() {
 	err := initEngine(gDriverName)
@@ -38,7 +40,7 @@ func initEngine(driverName string) error {
 		return err
 	}
 
-	tbMapper := core.NewPrefixMapper(core.SnakeMapper{}, "tb_")
+	tbMapper := core.NewPrefixMapper(core.SnakeMapper{}, gTableNamePrefix)
 	gEngine.SetTableMapper(tbMapper)
 	gEngine.SetColumnMapper(core.GonicMapper{})
 

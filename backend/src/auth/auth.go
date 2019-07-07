@@ -49,6 +49,10 @@ type LoginResponse struct {
 	JWT string
 }
 
+// ErrNotAuthenticated is returned when a request or context is not authenticated
+var ErrNotAuthenticated = fmt.Errorf("not authenticated")
+
+// ErrInvalidCredentails means that login credentials are invalid
 var ErrInvalidCredentails = fmt.Errorf("login credentials are invalid")
 
 // Login authenticates user login credentials and returns an auth token if login is successful
@@ -126,20 +130,20 @@ func AuthenticateRequestMiddleware(next http.Handler) http.Handler {
 		// Get the token
 		token, err := getBearerHeaderToken(r)
 		if err != nil {
-			api.WriteError(w, http.StatusUnauthorized, err, false)
+			api.WriteError(w, http.StatusUnauthorized, err, false, nil)
 			return
 		}
 
 		// Get the claim from the token (this verifies the token as well)
 		claim, err := getJWTClaimFromToken(token)
 		if err != nil {
-			api.WriteError(w, http.StatusUnauthorized, err, false)
+			api.WriteError(w, http.StatusUnauthorized, err, false, nil)
 			return
 		}
 
 		if claim.UserID.IsEmpty() {
 			clog.Errorf("auth: middleware: got an empty userID from a verified jwt token")
-			api.WriteError(w, http.StatusInternalServerError, fmt.Errorf(api.ErrMessageClean), false)
+			api.WriteError(w, http.StatusInternalServerError, fmt.Errorf(api.ErrMessageClean), false, nil)
 			return
 		}
 		// Authentication succesful
@@ -291,6 +295,3 @@ func IsContextAuthenticated(ctx context.Context) bool {
 	return true
 
 }
-
-// ErrNotAuthenticated is returned when a request or context is not authenticated
-var ErrNotAuthenticated = fmt.Errorf("not authenticated")

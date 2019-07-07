@@ -66,28 +66,31 @@ func writeResponse(w http.ResponseWriter, code int, v interface{}) {
 	// Json marshal the resp
 	data, err := json.Marshal(v)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, err, true)
+		writeError(w, http.StatusInternalServerError, err, true, nil)
 		return
 	}
 	// Write the response
 	_, err = w.Write(data)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, err, true)
+		writeError(w, http.StatusInternalServerError, err, true, nil)
 		return
 	}
 }
 
 // WriteError is a helper functoin to help write HTTP response
-func WriteError(w http.ResponseWriter, code int, err error, hide bool) {
-	writeError(w, code, err, hide)
+func WriteError(w http.ResponseWriter, code int, err error, hide bool, overrideErr error) {
+	writeError(w, code, err, hide, overrideErr)
 }
 
-func writeError(w http.ResponseWriter, code int, err error, hide bool) {
+func writeError(w http.ResponseWriter, code int, err error, hide bool, overrideErr error) {
 	errMessage := CleanErrMessage(err.Error())
 	clog.Error(errMessage)
 
 	if hide {
 		errMessage = ErrMessageClean
+		if overrideErr != nil {
+			errMessage = CleanErrMessage(overrideErr.Error())
+		}
 	}
 
 	errE := NewError(code, errMessage)

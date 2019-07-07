@@ -2,9 +2,58 @@ package orm
 
 import (
 	"fmt"
+	"sync"
 
+	"github.com/go-xorm/xorm"
 	"github.com/teejays/clog"
 )
+
+var gTestSession *xorm.Session
+var gTestSessionLock sync.RWMutex
+
+func StartTestSession() error {
+	gTestSessionLock.Lock()
+	defer gTestSessionLock.Unlock()
+	if gTestSession != nil {
+		return fmt.Errorf("orm: test session is already in use")
+	}
+	clog.Debugf("orm: Staring test session")
+	gTestSession = gEngine.NewSession()
+
+	return gTestSession.Begin()
+}
+func EndTestSession() error {
+	gTestSessionLock.Lock()
+	defer gTestSessionLock.Unlock()
+	if gTestSession == nil {
+		return fmt.Errorf("orm: test session is not in use, so can't end")
+	}
+	defer gTestSession.Close()
+	err := gTestSession.Rollback()
+	clog.Debugf("orm: Rolling back test session: %v", err)
+	gTestSession = nil
+	return err
+}
+
+func EmptyTable(table string) (int, error) {
+	table = fmt.Sprintf("%s%s", gTableNamePrefix, table)
+	result, err := gEngine.Exec(fmt.Sprintf("DELETE FROM %s WHERE 1=1", table))
+	if err != nil {
+		return -1, err
+	}
+	affected, err := result.RowsAffected()
+	return int(affected), err
+}
+
+func EmptyTables(tables []string) error {
+	for _, table := range tables {
+		_, err := EmptyTable(table)
+		if err != nil {
+			return fmt.Errorf("could not empty %s: %v", table, err)
+		}
+	}
+	return nil
+}
 
 var ErrNoRowsFound = fmt.Errorf("no rows found for the query")
 
@@ -30,14 +79,24 @@ func GetByColumn(columnName string, columnValue interface{}, v interface{}) (boo
 func InsertOne(v interface{}) error {
 	var err error
 	clog.Debugf("Inserting:\n %+v\n", v)
-	n, err := gEngine.InsertOne(v)
+
+	sess := gEngine.NewSession()
+
+	gTestSessionLock.RLock()
+	defer gTestSessionLock.RUnlock()
+	if gTestSession != nil {
+		sess = gTestSession
+	}
+	clog.Debugf("orm: Insert: value before insert:\n%+v", v)
+	n, err := sess.InsertOne(v)
 	if err != nil {
 		return errWithContext(fmt.Errorf("could not save: %v\n%+v", err, v))
 	}
 	if n != 1 {
-		// Case for panic.
+		// Case for panic?
 		return errWithContext(fmt.Errorf("expected %d rows to be inserted but got %d", 1, n))
 	}
+	clog.Debugf("orm: Insert: value after insert:\n%+v", v)
 	return nil
 }
 
