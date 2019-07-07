@@ -1,4 +1,4 @@
-package server
+package server_test
 
 import (
 	"bytes"
@@ -12,6 +12,7 @@ import (
 	"github.com/teejays/clog"
 	api "github.com/teejays/n-factor-vault/backend/library/go-api"
 	"github.com/teejays/n-factor-vault/backend/src/orm"
+	"github.com/teejays/n-factor-vault/backend/src/server"
 )
 
 type AssertFunc func(t *testing.T, v interface{})
@@ -30,6 +31,16 @@ func EmptyTestTables(t *testing.T, tables []string) {
 	if err := orm.EmptyTables(tables); err != nil {
 		t.Fatalf("error emptying tables: %v", err)
 	}
+}
+
+type handlerHttpTest struct {
+	name             string
+	content          string
+	wantStatusCode   int
+	wantContent      string
+	wantErrMessage   string
+	assertFieldsJSON map[string]AssertFunc
+	doNotEmptyTable  bool
 }
 
 func init() {
@@ -58,15 +69,7 @@ func TestHandleSignup(t *testing.T) {
 	var relevantOrmTables = []string{"user_secure"}
 	defer EmptyTestTables(t, relevantOrmTables)
 
-	tests := []struct {
-		name             string
-		content          string
-		wantStatusCode   int
-		wantContent      string
-		wantErrMessage   string
-		assertFieldsJSON map[string]AssertFunc
-		doNotEmptyTable  bool
-	}{
+	tests := []handlerHttpTest{
 		// TODO: Add test cases.
 		{
 			name:           "status BadRequest if request with empty content",
@@ -134,60 +137,62 @@ func TestHandleSignup(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-
-			// Create the HTTP request and response
-			var buff = bytes.NewBufferString(tt.content)
-			var r = httptest.NewRequest(http.MethodPost, "/v1/signup", buff)
-			var w = httptest.NewRecorder()
-
-			// Call the Handler
-			HandleSignup(w, r)
-
-			// Verify the respoonse
-			assert.Equal(t, tt.wantStatusCode, w.Code)
-
-			resp := w.Result()
-			defer resp.Body.Close()
-			body, err := ioutil.ReadAll(resp.Body)
-			if err != nil {
-				t.Error(err)
-			}
-
-			if tt.wantErrMessage != "" {
-				var errH api.Error
-				err = json.Unmarshal(body, &errH)
-				if err != nil {
-					t.Error(err)
-				}
-				assert.Equal(t, tt.wantStatusCode, int(errH.Code))
-				assert.Contains(t, errH.Message, tt.wantErrMessage)
-
-			}
-
-			if tt.wantContent != "" {
-				assert.Equal(t, tt.wantContent, string(body))
-			}
-
-			if tt.assertFieldsJSON != nil {
-				var rJSON = make(map[string]interface{})
-				err = json.Unmarshal(body, &rJSON)
-				if err != nil {
-					t.Error(err)
-				}
-				for k, assertFunc := range tt.assertFieldsJSON {
-					v, exists := rJSON[k]
-					if !exists {
-						t.Errorf("the key '%s' does not exist in the response but an AssertFunc for it was specified", k)
-					}
-					assertFunc(t, v)
-				}
-			}
-
-			// Empty the table unless specified
-			if !tt.doNotEmptyTable {
-				EmptyTestTables(t, relevantOrmTables)
-			}
-
+			runHandlerTest(t, tt, server.HandleSignup, http.MethodPost, "/v1/signup", relevantOrmTables)
 		})
+	}
+}
+
+func runHandlerTest(t *testing.T, tt handlerHttpTest, handlerFunc http.HandlerFunc, method string, route string, tablesToEmpty []string) {
+	// Create the HTTP request and response
+	var buff = bytes.NewBufferString(tt.content)
+	var r = httptest.NewRequest(http.MethodPost, route, buff)
+	var w = httptest.NewRecorder()
+
+	// Call the Handler
+	handlerFunc(w, r)
+
+	// Verify the respoonse
+	assert.Equal(t, tt.wantStatusCode, w.Code)
+
+	resp := w.Result()
+	defer resp.Body.Close()
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		t.Error(err)
+	}
+
+	if tt.wantErrMessage != "" {
+		var errH api.Error
+		err = json.Unmarshal(body, &errH)
+		if err != nil {
+			t.Error(err)
+		}
+		assert.Equal(t, tt.wantStatusCode, int(errH.Code))
+		assert.Contains(t, errH.Message, tt.wantErrMessage)
+
+	}
+
+	if tt.wantContent != "" {
+		assert.Equal(t, tt.wantContent, string(body))
+	}
+
+	if tt.assertFieldsJSON != nil {
+		var rJSON = make(map[string]interface{})
+		err = json.Unmarshal(body, &rJSON)
+		if err != nil {
+			t.Error(err)
+		}
+		for k, assertFunc := range tt.assertFieldsJSON {
+			v, exists := rJSON[k]
+			if !exists {
+				t.Errorf("the key '%s' does not exist in the response but an AssertFunc for it was specified", k)
+			}
+			assertFunc(t, v)
+		}
+	}
+
+	// Empty the table unless specified
+	if !tt.doNotEmptyTable {
+		EmptyTestTables(t, tablesToEmpty)
 	}
 }
