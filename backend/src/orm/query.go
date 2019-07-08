@@ -2,66 +2,9 @@ package orm
 
 import (
 	"fmt"
-	"sync"
-	"testing"
 
-	"github.com/go-xorm/xorm"
 	"github.com/teejays/clog"
 )
-
-var gTestSession *xorm.Session
-var gTestSessionLock sync.RWMutex
-
-func StartTestSession() error {
-	gTestSessionLock.Lock()
-	defer gTestSessionLock.Unlock()
-	if gTestSession != nil {
-		return fmt.Errorf("orm: test session is already in use")
-	}
-	clog.Debugf("orm: Staring test session")
-	gTestSession = gEngine.NewSession()
-
-	return gTestSession.Begin()
-}
-func EndTestSession() error {
-	gTestSessionLock.Lock()
-	defer gTestSessionLock.Unlock()
-	if gTestSession == nil {
-		return fmt.Errorf("orm: test session is not in use, so can't end")
-	}
-	defer gTestSession.Close()
-	err := gTestSession.Rollback()
-	clog.Debugf("orm: Rolling back test session: %v", err)
-	gTestSession = nil
-	return err
-}
-
-func EmptyTable(table string) (int, error) {
-	table = fmt.Sprintf("%s%s", gTableNamePrefix, table)
-	clog.Warnf("orm: emptying table %s", table)
-	result, err := gEngine.Exec(fmt.Sprintf("DELETE FROM %s WHERE 1=1", table))
-	if err != nil {
-		return -1, err
-	}
-	affected, err := result.RowsAffected()
-	return int(affected), err
-}
-
-func EmptyTables(tables []string) error {
-	for _, table := range tables {
-		_, err := EmptyTable(table)
-		if err != nil {
-			return fmt.Errorf("could not empty %s: %v", table, err)
-		}
-	}
-	return nil
-}
-
-func EmptyTestTables(t *testing.T, tables []string) {
-	if err := EmptyTables(tables); err != nil {
-		t.Fatalf("error emptying tables: %v", err)
-	}
-}
 
 var ErrNoRowsFound = fmt.Errorf("no rows found for the query")
 
@@ -76,7 +19,8 @@ func GetByID(id ID, v interface{}) (bool, error) {
 
 func GetByColumn(columnName string, columnValue interface{}, v interface{}) (bool, error) {
 	whereStmt := fmt.Sprintf("%s = ?", columnName)
-	has, err := gEngine.Table(v).Where(whereStmt, columnValue).Get(v)
+	// by default, let's order by ID so the ordering is consistent across calls
+	has, err := gEngine.Table(v).Where(whereStmt, columnValue).Asc("id").Get(v)
 	if err != nil {
 		return false, errWithContext(err)
 	}
@@ -90,11 +34,14 @@ func InsertOne(v interface{}) error {
 
 	sess := gEngine.NewSession()
 
+	// If we're in test mode and a test is using a test ORM session,
+	// we should use that session instead
 	gTestSessionLock.RLock()
 	defer gTestSessionLock.RUnlock()
 	if gTestSession != nil {
 		sess = gTestSession
 	}
+
 	clog.Debugf("orm: Insert: value before insert:\n%+v", v)
 	n, err := sess.InsertOne(v)
 	if err != nil {

@@ -5,12 +5,14 @@ package vault
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/teejays/clog"
-	"github.com/teejays/n-factor-vault/backend/src/auth"
 	"github.com/teejays/n-factor-vault/backend/src/orm"
 	"github.com/teejays/n-factor-vault/backend/src/user"
 )
+
+var gServiceName = "user service"
 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 * O R M   M O D E L S
@@ -55,6 +57,7 @@ func init() {
 
 // CreateVaultRequest are the parameters that are passed when creating a vault
 type CreateVaultRequest struct {
+	AdminUserID orm.ID
 	Name        string
 	Description string
 }
@@ -68,24 +71,25 @@ func CreateVault(ctx context.Context, req CreateVaultRequest) (*Vault, error) {
 	v := Vault{
 		Name:        req.Name,
 		Description: req.Description,
+		AdminUserID: req.AdminUserID,
+	}
+
+	// v.Users field is ignored by ORM in any case, and we only need to populate it as part of the Vault instance in Go
+	// For now, since this is a new vault, we have only one user (the admin)
+	v.Users, err = user.GetUsers(v.AdminUserID)
+	if err != nil {
+		return nil, err
 	}
 
 	// In this case get and assign the ID now so we can use it the vault-user entities
 	// Assigning it explicitly means that the ORm library doesn't assign it itself during insert
 	v.ID = orm.GetNewID()
 
-	// Get the ID of the user creating this vault, so we have the userID
-	u, err := auth.GetUserFromContext(ctx)
-	if err != nil {
-		return nil, err
-	}
-	v.AdminUserID = u.ID
-
 	// Set the vault-user
 	vu := []*vaultUser{
 		&vaultUser{
 			VaultID: v.ID,
-			UserID:  u.ID,
+			UserID:  v.AdminUserID,
 		},
 	}
 
@@ -95,8 +99,78 @@ func CreateVault(ctx context.Context, req CreateVaultRequest) (*Vault, error) {
 		return nil, err
 	}
 
-	// v.Users field is ignored by ORM in any case, and we only need to populate it as part of the Vault instance in Go
-	v.Users = []*user.User{u}
+	return &v, nil
+}
+
+// GetVault returns the vault object with the given id
+func GetVault(id orm.ID) (*Vault, error) {
+
+	var v Vault
+
+	// Get the Vault fields that are stored in the main DB (this does not include v.Users)
+	exists, err := orm.GetByID(id, &v)
+	if err != nil {
+		return nil, err
+	}
+	if !exists {
+		clog.Warnf("%s: no vault found with id %v", gServiceName, id)
+		return nil, nil
+	}
+	if v.ID != id {
+		panic(fmt.Sprintf("vault fetched by id (%v) has a different id (%v)", id, v.ID))
+	}
+
+	// Populate v.Users: Get vaultUsers first and then get user objects for those userIDs
+	vaultUsers, err := getVaultUsersByVaultID(id)
+	if err != nil {
+		return nil, err
+	}
+	for _, vu := range vaultUsers {
+		u, err := user.GetUser(vu.UserID)
+		if err != nil {
+			return nil, err
+		}
+		v.Users = append(v.Users, u)
+	}
 
 	return &v, nil
+}
+
+// GetVaultsByUser fetches all vaults that the given user is a part of (even if the user did not create that vault)
+func GetVaultsByUser(ctx context.Context, userID orm.ID) ([]*Vault, error) {
+
+	// Get all the vaultIDs associated with the user
+	vaultUsers, err := getVaultUsersByUserID(userID)
+	if err != nil {
+		return nil, err
+	}
+
+	// Get all the associated vaults for those vaultIDs
+	var vaults []*Vault
+	for _, vu := range vaultUsers {
+		v, err := GetVault(vu.VaultID)
+		if err != nil {
+			return nil, err
+		}
+		vaults = append(vaults, v)
+	}
+
+	return vaults, nil
+}
+
+func getVaultUsersByVaultID(vaultID orm.ID) ([]*vaultUser, error) {
+	var vaultUsers []*vaultUser
+	_, err := orm.GetByColumn("vault_id", vaultID, vaultUsers)
+	if err != nil {
+		return nil, err
+	}
+	return vaultUsers, nil
+}
+func getVaultUsersByUserID(userID orm.ID) ([]*vaultUser, error) {
+	var vaultUsers []*vaultUser
+	_, err := orm.GetByColumn("user_id", userID, vaultUsers)
+	if err != nil {
+		return nil, err
+	}
+	return vaultUsers, nil
 }

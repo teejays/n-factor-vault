@@ -119,47 +119,16 @@ func TestHandleLogin(t *testing.T) {
 	var relevantOrmTables = []string{"user_secure"}
 	defer orm.EmptyTestTables(t, relevantOrmTables)
 
-	// A function to create a user
-	var signupUsers = func(t *testing.T) {
-
-		// Define the Handler Request to signup a user
-		hreq := apitest.HandlerReqParams{
-			Route:       "/v1/signup",
-			Method:      http.MethodPost,
-			HandlerFunc: userapi.HandleSignup,
-		}
-
-		// Create User 1
-		_, _, err := apitest.MakeHandlerRequest(
-			hreq,
-			`{"name":"Jon Doe", "email":"jon.doe@email.com","password":"jons_secret"}`,
-			[]int{http.StatusCreated, http.StatusOK},
-		)
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		// Create User 2
-		_, _, err = apitest.MakeHandlerRequest(
-			hreq,
-			`{"name":"Jane Does", "email":"jane.does@email.com","password":"janes_secret"}`,
-			[]int{http.StatusCreated, http.StatusOK},
-		)
-		if err != nil {
-			t.Fatal(err)
-		}
-
-	}
-
 	// Define the Test Suite
 	ts := apitest.TestSuite{
 		Route:          "/v1/login",
 		Method:         http.MethodPost,
 		HandlerFunc:    userapi.HandleLogin,
-		BeforeTestFunc: signupUsers,
+		BeforeTestFunc: helperCreateTestUsersT,
 		AfterTestFunc:  func(t *testing.T) { orm.EmptyTestTables(t, relevantOrmTables) },
 	}
 
+	// Define the individual tests
 	tests := []apitest.HandlerTest{
 		{
 			Name:           "status OK if request has valid credentials - 1",
@@ -241,5 +210,42 @@ func TestHandleLogin(t *testing.T) {
 	}
 
 	ts.RunHandlerTests(t, tests)
+
+}
+
+func helperCreateTestUsersT(t *testing.T) {
+	err := helperCreateTestUsers()
+	if err != nil {
+		t.Error(err)
+	}
+}
+
+// A function to create test users
+func helperCreateTestUsers() error {
+
+	// Define the Handler Request to signup a user
+	p := apitest.HandlerReqParams{
+		Route:       "/v1/signup",
+		Method:      http.MethodPost,
+		HandlerFunc: userapi.HandleSignup,
+	}
+
+	// Create User 1
+	if _, _, err := p.MakeHandlerRequest(
+		`{"name":"Jon Doe", "email":"jon.doe@email.com","password":"jons_secret"}`,
+		[]int{http.StatusCreated, http.StatusOK},
+	); err != nil {
+		return err
+	}
+
+	// Create User 2
+	if _, _, err := p.MakeHandlerRequest(
+		`{"name":"Jane Does", "email":"jane.does@email.com","password":"janes_secret"}`,
+		[]int{http.StatusCreated, http.StatusOK},
+	); err != nil {
+		return err
+	}
+
+	return nil
 
 }

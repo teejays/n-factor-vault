@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"github.com/teejays/n-factor-vault/backend/library/go-api"
+	"github.com/teejays/n-factor-vault/backend/src/auth"
 	"github.com/teejays/n-factor-vault/backend/src/vault"
 )
 
@@ -32,6 +33,13 @@ func HandleCreateVault(w http.ResponseWriter, r *http.Request) {
 		api.WriteError(w, http.StatusBadRequest, err, false, nil)
 		return
 	}
+
+	// Populate the AdminUserID field of req using the authneticated userID
+	u, err := auth.GetUserFromContext(r.Context())
+	if err != nil {
+		api.WriteError(w, http.StatusInternalServerError, err, true, nil)
+	}
+	req.AdminUserID = u.ID
 
 	// Attempt login and get the token
 	v, err := vault.CreateVault(r.Context(), req)

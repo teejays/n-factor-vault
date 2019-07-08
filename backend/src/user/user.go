@@ -79,6 +79,7 @@ func (r CreateUserRequest) Validate() error {
 
 }
 
+// CreateUser creates a new user
 func CreateUser(req CreateUserRequest) (*User, error) {
 	var err error
 
@@ -118,7 +119,8 @@ func CreateUser(req CreateUserRequest) (*User, error) {
 	return &u.User, nil
 }
 
-func GetUserByID(id orm.ID) (*User, error) {
+// GetUser provides the single user with the ID id
+func GetUser(id orm.ID) (*User, error) {
 	var su UserSecure
 	exists, err := orm.GetByID(id, &su)
 	if err != nil {
@@ -134,6 +136,23 @@ func GetUserByID(id orm.ID) (*User, error) {
 	return &su.User, nil
 }
 
+// GetUsers returns an slice of users given the userIDs passed
+func GetUsers(ids ...orm.ID) ([]*User, error) {
+	var users []*User
+	for _, id := range ids {
+		u, err := GetUser(id)
+		if err != nil {
+			return nil, fmt.Errorf("userID %v: %v", id, err)
+		}
+		users = append(users, u)
+	}
+	return users, nil
+}
+
+// GetSecureUserByEmail returns the full User object, including the password info (iteration count, hash, salt etc.)
+// This function is exported only because the auth service needs this info to validate the password when a user is logging in.
+// DISCUSS: Ideally, this info shouldn't travel between services - so should we do the password validation here? Or should we
+// actually store these secure credentials as part of the auth service/database?
 func GetSecureUserByEmail(email string) (*UserSecure, error) {
 	return getSecureUserByEmail(email)
 }

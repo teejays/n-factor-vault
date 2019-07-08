@@ -68,7 +68,7 @@ func (ts TestSuite) RunHandlerTest(t *testing.T, tt HandlerTest) {
 		ts.Method,
 		ts.HandlerFunc,
 	}
-	resp, body, err := MakeHandlerRequest(hreq, tt.Content, []int{tt.WantStatusCode})
+	resp, body, err := hreq.MakeHandlerRequest(tt.Content, []int{tt.WantStatusCode})
 	assert.NoError(t, err)
 
 	// Verify the respoonse
@@ -160,7 +160,7 @@ type HandlerReqParams struct {
 
 // MakeHandlerRequest makes an request to the handler specified in p, using the content. It errors if there is an
 // error making the request, or if the received status code is not among the accepted status codes
-func MakeHandlerRequest(p HandlerReqParams, content string, acceptedStatusCodes []int) (*http.Response, []byte, error) {
+func (p HandlerReqParams) MakeHandlerRequest(content string, acceptedStatusCodes []int) (*http.Response, []byte, error) {
 	// Create the HTTP request and response
 	var buff = bytes.NewBufferString(content)
 	var r = httptest.NewRequest(p.Method, p.Route, buff)

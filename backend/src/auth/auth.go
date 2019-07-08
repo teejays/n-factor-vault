@@ -226,7 +226,7 @@ func GetUserFromContext(ctx context.Context) (*user.User, error) {
 	}
 
 	// Get the User
-	u, err := user.GetUserByID(userID)
+	u, err := user.GetUser(userID)
 	if err != nil {
 		return nil, err
 	}
