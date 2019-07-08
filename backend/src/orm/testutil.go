@@ -36,8 +36,8 @@ func EndTestSession() error {
 	return err
 }
 
-func EmptyTable(table string) (int, error) {
-	table = fmt.Sprintf("%s%s", gTableNamePrefix, table)
+func EmptyTable(objName string) (int, error) {
+	table := gEngine.GetTableMapper().Obj2Table(objName)
 	clog.Warnf("orm: emptying table %s", table)
 	result, err := gEngine.Exec(fmt.Sprintf("DELETE FROM %s WHERE 1=1", table))
 	if err != nil {
@@ -47,18 +47,18 @@ func EmptyTable(table string) (int, error) {
 	return int(affected), err
 }
 
-func EmptyTables(tables []string) error {
-	for _, table := range tables {
-		_, err := EmptyTable(table)
+func EmptyTables(objNames []string) error {
+	for _, objName := range objNames {
+		_, err := EmptyTable(objName)
 		if err != nil {
-			return fmt.Errorf("could not empty %s: %v", table, err)
+			return fmt.Errorf("could not empty %s: %v", objName, err)
 		}
 	}
 	return nil
 }
 
-func EmptyTestTables(t *testing.T, tables []string) {
-	if err := EmptyTables(tables); err != nil {
+func EmptyTestTables(t *testing.T, objNames []string) {
+	if err := EmptyTables(objNames); err != nil {
 		t.Fatalf("error emptying tables: %v", err)
 	}
 }

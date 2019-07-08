@@ -20,7 +20,13 @@ func init() {
 // 2. Use orm.TestSession (usage shown below), which is like a transaction but makes sure that the transaction is
 // not committed. The problem with this approach is that some fields such as 'created_at', 'updated_at' etc. are
 // only populated in the Go instance of a struct once the struct is inserted/committed into the DB.
-// Exmample user of method (2):
+//
+// Example (Method 1):
+//
+//  var relevantOrmTables = []string{"user_secure"}
+// 	defer orm.EmptyTestTables(t, relevantOrmTables)
+//
+// Exmample (Method 2):
 //
 // if err := orm.StartTestSession(); err != nil {
 // 	t.Errorf("could not start orm session: %v", err)
@@ -30,17 +36,18 @@ func init() {
 // 		t.Errorf("could not end orm session: %v", err)
 // 	}
 // }()
+//
 
 func TestHandleSignup(t *testing.T) {
 
-	var relevantOrmTables = []string{"user_secure"}
-	defer orm.EmptyTestTables(t, relevantOrmTables)
+	var relevantOrmObjs = []string{"UserSecure"}
+	defer orm.EmptyTestTables(t, relevantOrmObjs)
 
 	ts := apitest.TestSuite{
 		Route:         "/v1/signup",
 		Method:        http.MethodPost,
 		HandlerFunc:   userapi.HandleSignup,
-		AfterTestFunc: func(t *testing.T) { orm.EmptyTestTables(t, relevantOrmTables) },
+		AfterTestFunc: func(t *testing.T) { orm.EmptyTestTables(t, relevantOrmObjs) },
 	}
 
 	tests := []apitest.HandlerTest{
@@ -116,8 +123,8 @@ func TestHandleSignup(t *testing.T) {
 func TestHandleLogin(t *testing.T) {
 
 	// Make sure that we empty any table that these tests might populate too
-	var relevantOrmTables = []string{"user_secure"}
-	defer orm.EmptyTestTables(t, relevantOrmTables)
+	var relevantOrmObjs = []string{"UserSecure"}
+	defer orm.EmptyTestTables(t, relevantOrmObjs)
 
 	// Define the Test Suite
 	ts := apitest.TestSuite{
@@ -125,7 +132,7 @@ func TestHandleLogin(t *testing.T) {
 		Method:         http.MethodPost,
 		HandlerFunc:    userapi.HandleLogin,
 		BeforeTestFunc: helperCreateTestUsersT,
-		AfterTestFunc:  func(t *testing.T) { orm.EmptyTestTables(t, relevantOrmTables) },
+		AfterTestFunc:  func(t *testing.T) { orm.EmptyTestTables(t, relevantOrmObjs) },
 	}
 
 	// Define the individual tests

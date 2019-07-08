@@ -54,6 +54,14 @@ func GetRoutes() []api.Route {
 			HandlerFunc:  vaultapi.HandleCreateVault,
 			Authenticate: true,
 		},
+		// Vault Get Vaults For User
+		{
+			Method:       http.MethodGet,
+			Version:      ver1,
+			Path:         "vault",
+			HandlerFunc:  vaultapi.HandleGetVaults,
+			Authenticate: true,
+		},
 	}
 
 	return routes

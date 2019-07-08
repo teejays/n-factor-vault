@@ -19,26 +19,33 @@ import (
 
 // TestSuite defines a configuration that wraps a bunch of individual tests for a single HandlerFunc
 type TestSuite struct {
-	Route          string
-	Method         string
-	HandlerFunc    http.HandlerFunc
-	AfterTestFunc  func(*testing.T)
-	BeforeTestFunc func(*testing.T)
+	Route                 string
+	Method                string
+	HandlerFunc           http.HandlerFunc
+	Handler               http.Handler
+	AuthBearerTokenFunc   func(*testing.T) string
+	AuthMiddlewareHandler api.MiddlewareFunc
+	AfterTestFunc         func(*testing.T)
+	BeforeTestFunc        func(*testing.T)
 }
 
 // HandlerTest defines configuration for a single test run for a HandlerFunc. It is run run as part of the TestSuite
 type HandlerTest struct {
-	Name                string
-	Content             string
+	Name    string
+	Content string
+
+	BeforeRunFunc        func(*testing.T)
+	AfterRunFunc         func(*testing.T)
+	AuthBeaererTokenFunc func(*testing.T) string
+	SkipAuthToken        bool
+	SkipBeforeTestFunc   bool
+	SkipAfterTestFunc    bool
+
 	WantStatusCode      int
 	WantContent         string
+	AssertContentFields map[string]AssertFunc
 	WantErr             bool
 	WantErrMessage      string
-	AssertContentFields map[string]AssertFunc
-	BeforeRunFunc       func(*testing.T)
-	AfterRunFunc        func(*testing.T)
-	SkipBeforeTestFunc  bool
-	SkipAfterTestFunc   bool
 }
 
 // RunHandlerTests runs all the HandlerTests inside a testing.T.Run() loop
@@ -52,6 +59,11 @@ func (ts TestSuite) RunHandlerTests(t *testing.T, tests []HandlerTest) {
 
 // RunHandlerTest run all the HandlerTest tt
 func (ts TestSuite) RunHandlerTest(t *testing.T, tt HandlerTest) {
+	// If both HandlerFunc and Handler are provided, we don't know which one to use
+	if ts.HandlerFunc != nil && ts.Handler != nil {
+		t.Errorf("both Handler and HandlerFunc field provided in TestSuite for %s", ts.Route)
+		return
+	}
 
 	// Run BeforeRunFuncs
 	if ts.BeforeTestFunc != nil && !tt.SkipBeforeTestFunc {
@@ -62,11 +74,35 @@ func (ts TestSuite) RunHandlerTest(t *testing.T, tt HandlerTest) {
 		tt.BeforeRunFunc(t)
 	}
 
+	// Figure out what handler are we using
+	handler := ts.Handler
+	if handler == nil {
+		handler = ts.HandlerFunc
+	}
+	if handler == nil {
+		t.Errorf("both Handler and HandlerFunc provided in TestSuite are nil for %s", ts.Route)
+	}
+
+	// Authorization?
+	if ts.AuthBearerTokenFunc != nil {
+		handler = ts.AuthMiddlewareHandler(handler)
+	}
+
+	var authBearerToken string
+	// If we have specified an AuthBearerTokenFunc, use it. If there is one in tt as well, use that one.
+	if ts.AuthBearerTokenFunc != nil && !tt.SkipAuthToken {
+		authBearerToken = ts.AuthBearerTokenFunc(t)
+	}
+	if tt.AuthBeaererTokenFunc != nil && !tt.SkipAuthToken {
+		authBearerToken = tt.AuthBeaererTokenFunc(t)
+	}
+
 	// Create the HTTP request and response
 	hreq := HandlerReqParams{
-		ts.Route,
-		ts.Method,
-		ts.HandlerFunc,
+		Route:           ts.Route,
+		Method:          ts.Method,
+		Handler:         handler,
+		AuthBearerToken: authBearerToken,
 	}
 	resp, body, err := hreq.MakeHandlerRequest(tt.Content, []int{tt.WantStatusCode})
 	assert.NoError(t, err)
@@ -126,48 +162,44 @@ func (ts TestSuite) RunHandlerTest(t *testing.T, tt HandlerTest) {
 }
 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-* A S S E R T   F U N C S
-* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-
-// AssertFunc is a function that takes the testing.T pointer, a value v, and asserts
-// whether v is good
-type AssertFunc func(t *testing.T, v interface{})
-
-// AssertIsEqual is a of type AssertFunc. It verifies that the value v is equal to the expected value.
-var AssertIsEqual = func(expected interface{}) AssertFunc {
-	return func(t *testing.T, v interface{}) {
-		assert.Equal(t, expected, v)
-	}
-}
-
-// AssertNotEmptyFunc is a of type AssertFunc. It verifies that the value v is not empty.
-var AssertNotEmptyFunc = func(t *testing.T, v interface{}) {
-	assert.NotEmpty(t, v)
-}
-
-/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 * H A N D L E R   R E Q U E S T
 * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 // HandlerReqParams define a set of configuration that allow us to make repeated calls to Handler
 type HandlerReqParams struct {
-	Route       string
-	Method      string
-	HandlerFunc http.HandlerFunc
-	// Content             string
-	// AcceptedStatusCodes []int
+	Route  string
+	Method string
+	// Only one of HandlerFunc or Handler should be provided
+	HandlerFunc     http.HandlerFunc
+	Handler         http.Handler
+	AuthBearerToken string
 }
 
 // MakeHandlerRequest makes an request to the handler specified in p, using the content. It errors if there is an
 // error making the request, or if the received status code is not among the accepted status codes
 func (p HandlerReqParams) MakeHandlerRequest(content string, acceptedStatusCodes []int) (*http.Response, []byte, error) {
+	// If both HandlerFunc and Handler are provided, we don't know which one to use
+	if p.HandlerFunc != nil && p.Handler != nil {
+		return nil, nil, fmt.Errorf("both Handler and HandlerFunc field provided in HandlerReqParams for %s", p.Route)
+	}
+
 	// Create the HTTP request and response
 	var buff = bytes.NewBufferString(content)
 	var r = httptest.NewRequest(p.Method, p.Route, buff)
 	var w = httptest.NewRecorder()
 
+	// Add Authenticate header to request
+	if p.AuthBearerToken != "" {
+		r.Header.Add("Authorization", fmt.Sprintf("Bearer %s", p.AuthBearerToken))
+	}
+
+	handler := p.Handler
+	if handler == nil {
+		handler = p.HandlerFunc
+	}
+
 	// Call the Handler
-	p.HandlerFunc(w, r)
+	handler.ServeHTTP(w, r)
 
 	resp := w.Result()
 
@@ -189,4 +221,24 @@ func (p HandlerReqParams) MakeHandlerRequest(content string, acceptedStatusCodes
 	}
 
 	return resp, body, nil
+}
+
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+* A S S E R T   F U N C S
+* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+
+// AssertFunc is a function that takes the testing.T pointer, a value v, and asserts
+// whether v is good
+type AssertFunc func(t *testing.T, v interface{})
+
+// AssertIsEqual is a of type AssertFunc. It verifies that the value v is equal to the expected value.
+var AssertIsEqual = func(expected interface{}) AssertFunc {
+	return func(t *testing.T, v interface{}) {
+		assert.Equal(t, expected, v)
+	}
+}
+
+// AssertNotEmptyFunc is a of type AssertFunc. It verifies that the value v is not empty.
+var AssertNotEmptyFunc = func(t *testing.T, v interface{}) {
+	assert.NotEmpty(t, v)
 }

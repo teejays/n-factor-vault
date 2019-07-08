@@ -6,6 +6,7 @@ package vault
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/teejays/clog"
 	"github.com/teejays/n-factor-vault/backend/src/orm"
@@ -67,6 +68,17 @@ func CreateVault(ctx context.Context, req CreateVaultRequest) (*Vault, error) {
 	clog.Debugf("vault: creating vault %s", req.Name)
 	var err error
 
+	// TODO: Validate the request
+	if strings.TrimSpace(req.Name) == "" {
+		return nil, fmt.Errorf("name is empty")
+	}
+	if strings.TrimSpace(req.Description) == "" {
+		return nil, fmt.Errorf("description is empty")
+	}
+	if req.AdminUserID.IsEmpty() {
+		return nil, fmt.Errorf("admin userID is empty")
+	}
+
 	// Create a vault instance
 	v := Vault{
 		Name:        req.Name,
@@ -103,7 +115,8 @@ func CreateVault(ctx context.Context, req CreateVaultRequest) (*Vault, error) {
 }
 
 // GetVault returns the vault object with the given id
-func GetVault(id orm.ID) (*Vault, error) {
+func GetVault(ctx context.Context, id orm.ID) (*Vault, error) {
+	clog.Debugf("%s: GetVault(): id %v", gServiceName, id)
 
 	var v Vault
 
@@ -121,7 +134,7 @@ func GetVault(id orm.ID) (*Vault, error) {
 	}
 
 	// Populate v.Users: Get vaultUsers first and then get user objects for those userIDs
-	vaultUsers, err := getVaultUsersByVaultID(id)
+	vaultUsers, err := getVaultUsersByVaultID(ctx, id)
 	if err != nil {
 		return nil, err
 	}
@@ -138,17 +151,18 @@ func GetVault(id orm.ID) (*Vault, error) {
 
 // GetVaultsByUser fetches all vaults that the given user is a part of (even if the user did not create that vault)
 func GetVaultsByUser(ctx context.Context, userID orm.ID) ([]*Vault, error) {
+	clog.Debugf("%s: GetVaultsByUsers(): user %v", gServiceName, userID)
 
 	// Get all the vaultIDs associated with the user
-	vaultUsers, err := getVaultUsersByUserID(userID)
+	vaultUsers, err := getVaultUsersByUserID(ctx, userID)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("could not get vaultUsers by userID: %v", err)
 	}
 
 	// Get all the associated vaults for those vaultIDs
 	var vaults []*Vault
 	for _, vu := range vaultUsers {
-		v, err := GetVault(vu.VaultID)
+		v, err := GetVault(ctx, vu.VaultID)
 		if err != nil {
 			return nil, err
 		}
@@ -158,17 +172,26 @@ func GetVaultsByUser(ctx context.Context, userID orm.ID) ([]*Vault, error) {
 	return vaults, nil
 }
 
-func getVaultUsersByVaultID(vaultID orm.ID) ([]*vaultUser, error) {
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+* H E L P E R S
+* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+
+func getVaultUsersByVaultID(ctx context.Context, vaultID orm.ID) ([]*vaultUser, error) {
+	clog.Debugf("%s: getVaultUsersByVaultID(): vauldID %v", gServiceName, vaultID)
+
 	var vaultUsers []*vaultUser
-	_, err := orm.GetByColumn("vault_id", vaultID, vaultUsers)
+	err := orm.FindByColumn("vault_id", vaultID, &vaultUsers)
 	if err != nil {
 		return nil, err
 	}
 	return vaultUsers, nil
 }
-func getVaultUsersByUserID(userID orm.ID) ([]*vaultUser, error) {
+
+func getVaultUsersByUserID(ctx context.Context, userID orm.ID) ([]*vaultUser, error) {
+	clog.Debugf("%s: getVaultUsersByUserID(): userID %v", gServiceName, userID)
+
 	var vaultUsers []*vaultUser
-	_, err := orm.GetByColumn("user_id", userID, vaultUsers)
+	err := orm.FindByColumn("user_id", userID, &vaultUsers)
 	if err != nil {
 		return nil, err
 	}

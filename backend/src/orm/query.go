@@ -19,13 +19,23 @@ func GetByID(id ID, v interface{}) (bool, error) {
 
 func GetByColumn(columnName string, columnValue interface{}, v interface{}) (bool, error) {
 	whereStmt := fmt.Sprintf("%s = ?", columnName)
-	// by default, let's order by ID so the ordering is consistent across calls
-	has, err := gEngine.Table(v).Where(whereStmt, columnValue).Asc("id").Get(v)
+	has, err := gEngine.Table(v).Where(whereStmt, columnValue).Get(v)
 	if err != nil {
 		return false, errWithContext(err)
 	}
 
 	return has, nil
+}
+
+func FindByColumn(columnName string, columnValue interface{}, v interface{}) error {
+	whereStmt := fmt.Sprintf("%s = ?", columnName)
+	// by default, let's order by ID so the ordering is consistent across calls
+	err := gEngine.Where(whereStmt, columnValue).Asc("id").Find(v)
+	if err != nil {
+		return errWithContext(err)
+	}
+
+	return nil
 }
 
 func InsertOne(v interface{}) error {
