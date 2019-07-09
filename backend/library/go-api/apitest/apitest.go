@@ -84,7 +84,7 @@ func (ts TestSuite) RunHandlerTest(t *testing.T, tt HandlerTest) {
 	}
 
 	// Authorization?
-	if ts.AuthBearerTokenFunc != nil {
+	if ts.AuthMiddlewareHandler != nil {
 		handler = ts.AuthMiddlewareHandler(handler)
 	}
 
@@ -173,13 +173,20 @@ type HandlerReqParams struct {
 	HandlerFunc     http.HandlerFunc
 	Handler         http.Handler
 	AuthBearerToken string
+	Middlewares     []api.MiddlewareFunc
 }
 
 // MakeHandlerRequest makes an request to the handler specified in p, using the content. It errors if there is an
 // error making the request, or if the received status code is not among the accepted status codes
 func (p HandlerReqParams) MakeHandlerRequest(content string, acceptedStatusCodes []int) (*http.Response, []byte, error) {
+
+	// Figure out what handler are we using
+	handler := p.Handler
+	if handler == nil {
+		handler = p.HandlerFunc
+	}
 	// If both HandlerFunc and Handler are provided, we don't know which one to use
-	if p.HandlerFunc != nil && p.Handler != nil {
+	if handler == nil {
 		return nil, nil, fmt.Errorf("both Handler and HandlerFunc field provided in HandlerReqParams for %s", p.Route)
 	}
 
@@ -193,9 +200,9 @@ func (p HandlerReqParams) MakeHandlerRequest(content string, acceptedStatusCodes
 		r.Header.Add("Authorization", fmt.Sprintf("Bearer %s", p.AuthBearerToken))
 	}
 
-	handler := p.Handler
-	if handler == nil {
-		handler = p.HandlerFunc
+	// Add Middlewares
+	for _, mw := range p.Middlewares {
+		handler = mw(handler)
 	}
 
 	// Call the Handler
