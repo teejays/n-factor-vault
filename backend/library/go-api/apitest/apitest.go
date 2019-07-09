@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
+	"reflect"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -43,7 +44,8 @@ type HandlerTest struct {
 
 	WantStatusCode      int
 	WantContent         string
-	AssertContentFields map[string]AssertFunc
+	AssertContentFields map[string]AssertFunc // This only works if the response if a map (not if it's an array)
+	AssertContentFuncs  []AssertFunc
 	WantErr             bool
 	WantErrMessage      string
 }
@@ -84,7 +86,7 @@ func (ts TestSuite) RunHandlerTest(t *testing.T, tt HandlerTest) {
 	}
 
 	// Authorization?
-	if ts.AuthBearerTokenFunc != nil {
+	if ts.AuthMiddlewareHandler != nil {
 		handler = ts.AuthMiddlewareHandler(handler)
 	}
 
@@ -104,7 +106,7 @@ func (ts TestSuite) RunHandlerTest(t *testing.T, tt HandlerTest) {
 		Handler:         handler,
 		AuthBearerToken: authBearerToken,
 	}
-	resp, body, err := hreq.MakeHandlerRequest(tt.Content, []int{tt.WantStatusCode})
+	resp, body, err := hreq.MakeHandlerRequest(tt.Content, nil)
 	assert.NoError(t, err)
 
 	// Verify the respoonse
@@ -150,6 +152,22 @@ func (ts TestSuite) RunHandlerTest(t *testing.T, tt HandlerTest) {
 		}
 	}
 
+	if tt.AssertContentFuncs != nil {
+		// Unmarshall the body in to a map[string]interface{}
+		var rJSON interface{}
+		err = json.Unmarshal(body, &rJSON)
+		if err != nil {
+			t.Error(err)
+		}
+		for _, f := range tt.AssertContentFuncs {
+			f(t, rJSON)
+		}
+	}
+
+	if t.Failed() {
+		fmt.Printf("apitest: Content validation failed for:\n%s\n", body)
+	}
+
 	// Run AfterRunFuncs
 	if tt.AfterRunFunc != nil {
 		tt.AfterRunFunc(t)
@@ -173,13 +191,20 @@ type HandlerReqParams struct {
 	HandlerFunc     http.HandlerFunc
 	Handler         http.Handler
 	AuthBearerToken string
+	Middlewares     []api.MiddlewareFunc
 }
 
 // MakeHandlerRequest makes an request to the handler specified in p, using the content. It errors if there is an
 // error making the request, or if the received status code is not among the accepted status codes
 func (p HandlerReqParams) MakeHandlerRequest(content string, acceptedStatusCodes []int) (*http.Response, []byte, error) {
+
+	// Figure out what handler are we using
+	handler := p.Handler
+	if handler == nil {
+		handler = p.HandlerFunc
+	}
 	// If both HandlerFunc and Handler are provided, we don't know which one to use
-	if p.HandlerFunc != nil && p.Handler != nil {
+	if handler == nil {
 		return nil, nil, fmt.Errorf("both Handler and HandlerFunc field provided in HandlerReqParams for %s", p.Route)
 	}
 
@@ -193,9 +218,9 @@ func (p HandlerReqParams) MakeHandlerRequest(content string, acceptedStatusCodes
 		r.Header.Add("Authorization", fmt.Sprintf("Bearer %s", p.AuthBearerToken))
 	}
 
-	handler := p.Handler
-	if handler == nil {
-		handler = p.HandlerFunc
+	// Add Middlewares
+	for _, mw := range p.Middlewares {
+		handler = mw(handler)
 	}
 
 	// Call the Handler
@@ -241,4 +266,23 @@ var AssertIsEqual = func(expected interface{}) AssertFunc {
 // AssertNotEmptyFunc is a of type AssertFunc. It verifies that the value v is not empty.
 var AssertNotEmptyFunc = func(t *testing.T, v interface{}) {
 	assert.NotEmpty(t, v)
+}
+
+// AssertIsSlice asserts that v is a slice or an array
+var AssertIsSlice = func(t *testing.T, v interface{}) {
+	if _, ok := v.([]interface{}); !ok {
+		t.Errorf("could not assert that it's a slice, it's %s", reflect.ValueOf(v).Kind())
+	}
+}
+
+// AssertSliceOfLen asserts that v is a slice or an array with n elements
+var AssertSliceOfLen = func(n int) AssertFunc {
+	return func(t *testing.T, v interface{}) {
+		_v, ok := v.([]interface{})
+		if !ok {
+			t.Errorf("could not assert that it's a slice, it's %s", reflect.ValueOf(v).Kind())
+			return
+		}
+		assert.Equal(t, n, len(_v))
+	}
 }

@@ -13,7 +13,7 @@ import (
 	"github.com/teejays/n-factor-vault/backend/src/user"
 )
 
-var gServiceName = "user service"
+var gServiceName = "Vault Service"
 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 * O R M   M O D E L S
@@ -160,7 +160,7 @@ func GetVaultsByUser(ctx context.Context, userID orm.ID) ([]*Vault, error) {
 	}
 
 	// Get all the associated vaults for those vaultIDs
-	var vaults []*Vault
+	var vaults = []*Vault{}
 	for _, vu := range vaultUsers {
 		v, err := GetVault(ctx, vu.VaultID)
 		if err != nil {
@@ -168,7 +168,7 @@ func GetVaultsByUser(ctx context.Context, userID orm.ID) ([]*Vault, error) {
 		}
 		vaults = append(vaults, v)
 	}
-
+	clog.Debugf("%s: GetVaultsByUsers(): user %v: returning:\n%+v", gServiceName, userID, vaults)
 	return vaults, nil
 }
 

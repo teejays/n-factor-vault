@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"reflect"
 	"strconv"
 	"strings"
 
@@ -58,6 +59,7 @@ func WriteResponse(w http.ResponseWriter, code int, v interface{}) {
 
 func writeResponse(w http.ResponseWriter, code int, v interface{}) {
 	w.WriteHeader(code)
+	clog.Debugf("api: writeResponse: content kind: %v; content:\n%+v", reflect.ValueOf(v).Kind(), v)
 
 	if v == nil {
 		return
@@ -69,6 +71,7 @@ func writeResponse(w http.ResponseWriter, code int, v interface{}) {
 		writeError(w, http.StatusInternalServerError, err, true, nil)
 		return
 	}
+
 	// Write the response
 	_, err = w.Write(data)
 	if err != nil {

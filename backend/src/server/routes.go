@@ -58,7 +58,7 @@ func GetRoutes() []api.Route {
 		{
 			Method:       http.MethodGet,
 			Version:      ver1,
-			Path:         "vault",
+			Path:         "vaults",
 			HandlerFunc:  vaulthandler.HandleGetVaults,
 			Authenticate: true,
 		},

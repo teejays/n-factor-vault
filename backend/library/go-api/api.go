@@ -43,14 +43,21 @@ func GetHandler(routes []Route, authMiddlewareFunc MiddlewareFunc, preMiddleware
 	}
 
 	// Create an authenticated subrouter
-	a := m.PathPrefix("").Subrouter()
-	a.Use(mux.MiddlewareFunc(authMiddlewareFunc))
+	var a *mux.Router
+	if authMiddlewareFunc != nil {
+		a = m.PathPrefix("").Subrouter()
+		a.Use(mux.MiddlewareFunc(authMiddlewareFunc))
+	}
 
 	// Range over routes and register them
 	for _, route := range routes {
 		// If the route is supposed to be authenticated, use auth mux
 		r := m
 		if route.Authenticate {
+			if a == nil {
+				// We marked a route as requiring authentication but provided no auth middleware func :(
+				return nil, fmt.Errorf("route for %s is has authentication flag set but no authentication middleware has been provided", route.Path)
+			}
 			r = a
 		}
 		// Register the route
