@@ -4,8 +4,8 @@ import (
 	"net/http"
 
 	api "github.com/teejays/n-factor-vault/backend/library/go-api"
-	"github.com/teejays/n-factor-vault/backend/src/user/userapi"
-	"github.com/teejays/n-factor-vault/backend/src/vault/vaultapi"
+	userhandler "github.com/teejays/n-factor-vault/backend/src/user/handler"
+	vaulthandler "github.com/teejays/n-factor-vault/backend/src/vault/handler"
 )
 
 const (
@@ -37,21 +37,21 @@ func GetRoutes() []api.Route {
 			Method:      http.MethodPost,
 			Version:     ver1,
 			Path:        "signup",
-			HandlerFunc: userapi.HandleSignup,
+			HandlerFunc: userhandler.HandleSignup,
 		},
 		// Login Handler
 		{
 			Method:      http.MethodPost,
 			Version:     ver1,
 			Path:        "login",
-			HandlerFunc: userapi.HandleLogin,
+			HandlerFunc: userhandler.HandleLogin,
 		},
 		// Vault Create Handler
 		{
 			Method:       http.MethodPost,
 			Version:      ver1,
 			Path:         "vault",
-			HandlerFunc:  vaultapi.HandleCreateVault,
+			HandlerFunc:  vaulthandler.HandleCreateVault,
 			Authenticate: true,
 		},
 		// Vault Get Vaults For User
@@ -59,7 +59,7 @@ func GetRoutes() []api.Route {
 			Method:       http.MethodGet,
 			Version:      ver1,
 			Path:         "vault",
-			HandlerFunc:  vaultapi.HandleGetVaults,
+			HandlerFunc:  vaulthandler.HandleGetVaults,
 			Authenticate: true,
 		},
 	}
