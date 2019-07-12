@@ -36,8 +36,9 @@ type Vault struct {
 // by itself.
 type vaultUser struct {
 	orm.BaseModel `xorm:"extends"`
-	VaultID       orm.ID `xorm:"'vault_id' notnull unique(vault_user)" json:"vault_id"`
-	UserID        orm.ID `xorm:"'user_id' notnull unique(vault_user)" json:"user_id"`
+	VaultID       orm.ID `xorm:"notnull unique(vault_user)" json:"vault_id"`
+	UserID        orm.ID `xorm:"notnull unique(vault_user)" json:"user_id"`
+	IsConfirmed   bool   `xorm:"notnull default false"`
 }
 
 func init() {
@@ -97,11 +98,13 @@ func CreateVault(ctx context.Context, req CreateVaultRequest) (*Vault, error) {
 	// Assigning it explicitly means that the ORm library doesn't assign it itself during insert
 	v.ID = orm.GetNewID()
 
-	// Set the vault-user
+	// Set the vault-user for the user creating this vault. Since this user is the admin,
+	// we can assume that their relation to the vault is 'confirmed'
 	vu := []*vaultUser{
 		&vaultUser{
-			VaultID: v.ID,
-			UserID:  v.AdminUserID,
+			VaultID:     v.ID,
+			UserID:      v.AdminUserID,
+			IsConfirmed: true,
 		},
 	}
 
@@ -191,9 +194,32 @@ func getVaultUsersByUserID(ctx context.Context, userID orm.ID) ([]*vaultUser, er
 	clog.Debugf("%s: getVaultUsersByUserID(): userID %v", gServiceName, userID)
 
 	var vaultUsers []*vaultUser
-	err := orm.FindByColumn("user_id", userID, &vaultUsers)
+	var whereConds = map[string]interface{}{
+		"user_id":      userID,
+		"is_confirmed": true,
+	}
+	err := orm.FindByColumns(whereConds, &vaultUsers)
 	if err != nil {
 		return nil, err
 	}
 	return vaultUsers, nil
+}
+
+func addUserToVault(ctx context.Context, vaultID, userID orm.ID) (*vaultUser, error) {
+	clog.Debugf("%s: addUserToVault(): userID %v", gServiceName, userID)
+
+	var vu = vaultUser{
+		VaultID: vaultID,
+		UserID:  userID,
+		// TODO: We shouldn't be confirming users into a vault by default. In reality, they should be invited
+		// or should request to join, and once they accept or the request is approved, the should be confirmed.
+		IsConfirmed: true,
+	}
+
+	err := orm.InsertOne(&vu)
+	if err != nil {
+		return nil, err
+	}
+
+	return &vu, nil
 }

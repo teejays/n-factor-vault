@@ -16,7 +16,7 @@ import (
 )
 
 func init() {
-	clog.LogLevel = 8
+	clog.LogLevel = 0
 }
 
 func TestHandleCreateVault(t *testing.T) {

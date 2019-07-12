@@ -27,10 +27,35 @@ func GetByColumn(columnName string, columnValue interface{}, v interface{}) (boo
 	return has, nil
 }
 
-func FindByColumn(columnName string, columnValue interface{}, v interface{}) error {
+func FindByColumn(columnName string, columnValue interface{}, result interface{}) error {
 	whereStmt := fmt.Sprintf("%s = ?", columnName)
 	// by default, let's order by ID so the ordering is consistent across calls
-	err := gEngine.Where(whereStmt, columnValue).Asc("id").Find(v)
+	err := gEngine.Where(whereStmt, columnValue).Asc("id").Find(result)
+	if err != nil {
+		return errWithContext(err)
+	}
+
+	return nil
+}
+
+func FindByColumns(whereColsVals map[string]interface{}, result interface{}) error {
+
+	// Build the where statement
+	var whereStmt string
+	var vals []interface{}
+	var cnt int
+	for col, val := range whereColsVals {
+		if cnt > 0 {
+			whereStmt += " AND "
+		}
+		whereStmt += fmt.Sprintf("%s = ?", col)
+		vals = append(vals, val)
+		cnt++
+	}
+	clog.Debugf("orm: FindByCols: whereStmt: %s", whereStmt)
+
+	// by default, let's order by ID so the ordering is consistent across calls
+	err := gEngine.Where(whereStmt, vals...).Asc("id").Find(result)
 	if err != nil {
 		return errWithContext(err)
 	}
@@ -40,7 +65,7 @@ func FindByColumn(columnName string, columnValue interface{}, v interface{}) err
 
 func InsertOne(v interface{}) error {
 	var err error
-	clog.Debugf("Inserting:\n %+v\n", v)
+	clog.Debugf("orm: InsertingOne:\n %+v\n", v)
 
 	sess := gEngine.NewSession()
 
