@@ -182,6 +182,11 @@ type AddUserToVaultRequest struct {
 
 func AddUserToVault(ctx context.Context, req AddUserToVaultRequest) (*Vault, error) {
 	clog.Debugf("%s: AddUserToVault(ctx, req): req:\n%+v", gServiceName, req)
+
+	// TODO: Make sure that the user making a request to add someone to a vault
+	// actually has rights/access to add someone to this vault
+	// i.e. at least check that the user is a part of the vault itself
+
 	// Get the vault
 	v, err := GetVault(ctx, req.VaultID)
 	if err != nil {
