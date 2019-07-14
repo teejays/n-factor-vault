@@ -175,6 +175,42 @@ func GetVaultsByUser(ctx context.Context, userID orm.ID) ([]*Vault, error) {
 	return vaults, nil
 }
 
+type AddUserToVaultRequest struct {
+	UserID  orm.ID `json:"user_id"`
+	VaultID orm.ID
+}
+
+func AddUserToVault(ctx context.Context, req AddUserToVaultRequest) (*Vault, error) {
+	clog.Debugf("%s: AddUserToVault(ctx, req): req:\n%+v", gServiceName, req)
+	// Get the vault
+	v, err := GetVault(ctx, req.VaultID)
+	if err != nil {
+		return nil, err
+	}
+	// Add user to the vault
+	err = v.AddUser(ctx, req.UserID)
+	if err != nil {
+		return nil, err
+	}
+	return v, nil
+}
+
+// AddUser adds a new user to the vault
+func (v *Vault) AddUser(ctx context.Context, userID orm.ID) error {
+	// add a new vault user
+	vu, err := addVaultUser(ctx, v.ID, userID)
+	if err != nil {
+		return err
+	}
+	// if successfully added vaultUser to the database, append it to this vault users
+	u, err := user.GetUser(vu.UserID)
+	if err != nil {
+		return err
+	}
+	v.Users = append(v.Users, u)
+	return nil
+}
+
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 * H E L P E R S
 * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
@@ -205,8 +241,16 @@ func getVaultUsersByUserID(ctx context.Context, userID orm.ID) ([]*vaultUser, er
 	return vaultUsers, nil
 }
 
-func addUserToVault(ctx context.Context, vaultID, userID orm.ID) (*vaultUser, error) {
-	clog.Debugf("%s: addUserToVault(): userID %v", gServiceName, userID)
+func addVaultUser(ctx context.Context, vaultID, userID orm.ID) (*vaultUser, error) {
+	clog.Debugf("%s: addUserToVault(): vaultID <%v> | userID <%v>", gServiceName, userID)
+
+	if userID.IsEmpty() {
+		return nil, fmt.Errorf("userID is empty")
+	}
+
+	if vaultID.IsEmpty() {
+		return nil, fmt.Errorf("vaultID is empty")
+	}
 
 	var vu = vaultUser{
 		VaultID: vaultID,

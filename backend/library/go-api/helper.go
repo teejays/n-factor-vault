@@ -3,6 +3,7 @@ package api
 import (
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"reflect"
 	"strconv"
@@ -34,8 +35,8 @@ func GetQueryParamInt(r *http.Request, name string, defaultVal int) (int, error)
 	return val, nil
 }
 
-// GetMuxParamrInt extracts the param with given name out of the route path
-func GetMuxParamrInt(r *http.Request, name string) (int64, error) {
+// GetMuxParamInt extracts the param with given name out of the route path
+func GetMuxParamInt(r *http.Request, name string) (int64, error) {
 
 	var vars = mux.Vars(r)
 	clog.Debugf("MUX vars are: %+v", vars)
@@ -52,7 +53,20 @@ func GetMuxParamrInt(r *http.Request, name string) (int64, error) {
 	return int64(val), nil
 }
 
-// WriteResponse is a helper functoin to help write HTTP response
+// GetMuxParamStr extracts the param with given name out of the route path
+func GetMuxParamStr(r *http.Request, name string) (string, error) {
+
+	var vars = mux.Vars(r)
+	clog.Debugf("MUX vars are: %+v", vars)
+	valStr := vars[name]
+	if strings.TrimSpace(valStr) == "" {
+		return "", fmt.Errorf("var '%s' is not in the route", name)
+	}
+
+	return valStr, nil
+}
+
+// WriteResponse is a helper function to help write HTTP response
 func WriteResponse(w http.ResponseWriter, code int, v interface{}) {
 	writeResponse(w, code, v)
 }
@@ -80,7 +94,7 @@ func writeResponse(w http.ResponseWriter, code int, v interface{}) {
 	}
 }
 
-// WriteError is a helper functoin to help write HTTP response
+// WriteError is a helper function to help write HTTP response
 func WriteError(w http.ResponseWriter, code int, err error, hide bool, overrideErr error) {
 	writeError(w, code, err, hide, overrideErr)
 }
@@ -107,4 +121,34 @@ func writeError(w http.ResponseWriter, code int, err error, hide bool, overrideE
 	if err != nil {
 		panic(fmt.Sprintf("Failed to write error to the http response: %v", err))
 	}
+}
+
+// UnmarshalJSONFromRequest takes in a pointer to an object and populates
+// it by reading the content body of the HTTP request, and unmarshaling the
+// body into the variable v.
+func UnmarshalJSONFromRequest(r *http.Request, v interface{}) error {
+	// Read the HTTP request body
+	body, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		// api.WriteError(w, http.StatusBadRequest, err, false, nil)
+		return err
+	}
+	defer r.Body.Close()
+
+	if len(body) < 1 {
+		// api.WriteError(w, http.StatusBadRequest, api.ErrEmptyBody, false, nil)
+		return ErrEmptyBody
+	}
+
+	clog.Debugf("api: Unmarshalling to JSON: body:\n%+v", string(body))
+
+	// Unmarshal JSON into Go type
+	err = json.Unmarshal(body, &v)
+	if err != nil {
+		// api.WriteError(w, http.StatusBadRequest, err, true, api.ErrInvalidJSON)
+		clog.Errorf("api: Error unmarshaling JSON: %v", err)
+		return ErrInvalidJSON
+	}
+
+	return nil
 }

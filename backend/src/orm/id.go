@@ -16,3 +16,9 @@ func (id ID) IsEmpty() bool {
 func GetNewID() ID {
 	return ID(uuid.New().String())
 }
+
+// StrToID takes a string and converts it to type ID.
+// It returns an error is the string cannot be converted to type ID.
+func StrToID(str string) (ID, error) {
+	return ID(str), nil
+}

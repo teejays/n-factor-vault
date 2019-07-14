@@ -62,6 +62,13 @@ func GetRoutes() []api.Route {
 			HandlerFunc:  vaulthandler.HandleGetVaults,
 			Authenticate: true,
 		},
+		{
+			Method:       http.MethodPost,
+			Version:      ver1,
+			Path:         "vault/{vault_id}/user",
+			HandlerFunc:  vaulthandler.HandleAddVaultUser,
+			Authenticate: true,
+		},
 	}
 
 	return routes
