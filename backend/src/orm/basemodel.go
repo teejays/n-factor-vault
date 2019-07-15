@@ -17,6 +17,8 @@ type BaseModel struct {
 // BeforeInsert is called by xorm before each insert. This function can be used to edit
 // or overwrite fields.
 func (m *BaseModel) BeforeInsert() {
+	// If we are saving an entity, and it doesn't have an ID,
+	// then get a new ID and add it
 	if m.ID == "" {
 		m.ID = GetNewID()
 	}

@@ -13,7 +13,7 @@ import (
 	// this is needed to support postgres connection
 	_ "github.com/lib/pq"
 
-	"github.com/teejays/n-factor-vault/backend/src/env"
+	"github.com/teejays/n-factor-vault/backend/library/env"
 )
 
 var gEngine *xorm.Engine

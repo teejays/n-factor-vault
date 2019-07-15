@@ -3,7 +3,7 @@ package main
 import (
 	"github.com/teejays/clog"
 
-	"github.com/teejays/n-factor-vault/backend/src/env"
+	"github.com/teejays/n-factor-vault/backend/library/env"
 	"github.com/teejays/n-factor-vault/backend/src/server"
 )
 
