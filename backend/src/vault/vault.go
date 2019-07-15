@@ -137,7 +137,7 @@ func GetVault(ctx context.Context, id orm.ID) (*Vault, error) {
 	}
 
 	// Populate v.Users: Get vaultUsers first and then get user objects for those userIDs
-	vaultUsers, err := getVaultUsersByVaultID(ctx, id)
+	vaultUsers, err := GetVaultUsersByVaultID(ctx, id)
 	if err != nil {
 		return nil, err
 	}
@@ -220,14 +220,15 @@ func (v *Vault) AddUser(ctx context.Context, userID orm.ID) error {
 * H E L P E R S
 * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-func getVaultUsersByVaultID(ctx context.Context, vaultID orm.ID) ([]*vaultUser, error) {
-	clog.Debugf("%s: getVaultUsersByVaultID(): vauldID %v", gServiceName, vaultID)
+func GetVaultUsersByVaultID(ctx context.Context, vaultID orm.ID) ([]*vaultUser, error) {
+	clog.Debugf("%s: GetVaultUsersByVaultID(): vaultID %v", gServiceName, vaultID)
 
 	var vaultUsers []*vaultUser
 	err := orm.FindByColumn("vault_id", vaultID, &vaultUsers)
 	if err != nil {
 		return nil, err
 	}
+
 	return vaultUsers, nil
 }
 

@@ -126,3 +126,55 @@ func InsertTx(vs ...interface{}) (err error) {
 	}
 	return
 }
+
+func InsertMulti(vs interface{}) error {
+	var err error
+	clog.Debugf("orm: InsertingMulti:\n %+v\n", vs)
+
+	sess := gEngine.NewSession()
+
+	// If we're in test mode and a test is using a test ORM session,
+	// we should use that session instead
+	gTestSessionLock.RLock()
+	defer gTestSessionLock.RUnlock()
+	if gTestSession != nil {
+		sess = gTestSession
+	}
+
+	clog.Debugf("orm: Insert: value before insert:\n%+v", vs)
+	n, err := sess.InsertMulti(vs)
+	if err != nil {
+		return errWithContext(fmt.Errorf("could not save: %v\n%+v", err, vs))
+	}
+	clog.Debugf("orm: InsertMulti: %v rows inserted", n)
+	return nil
+}
+
+// Update updates the rows that satisfies the conditions to value v
+func Update(conditions map[string]string, v interface{}) error {
+	var err error
+	clog.Debugf("orm: Updating :\n %+v\n", v)
+
+	sess := gEngine.NewSession()
+
+	// If we're in test mode and a test is using a test ORM session,
+	// we should use that session instead
+	gTestSessionLock.RLock()
+	defer gTestSessionLock.RUnlock()
+	if gTestSession != nil {
+		sess = gTestSession
+	}
+
+	clog.Debugf("orm: Update: value before update:\n%+v", v)
+
+	for colName, colVal := range conditions {
+		colStr := fmt.Sprintf("%s = ?", colName)
+		sess = sess.Where(colStr, colVal)
+	}
+	n, err := sess.AllCols().Update(v)
+	if err != nil {
+		return errWithContext(fmt.Errorf("could not save: %v\n%+v", err, v))
+	}
+	clog.Debugf("orm: Update: %v rows affected", n)
+	return nil
+}
