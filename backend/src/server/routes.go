@@ -4,8 +4,7 @@ import (
 	"net/http"
 
 	api "github.com/teejays/n-factor-vault/backend/library/go-api"
-	userhandler "github.com/teejays/n-factor-vault/backend/src/user/handler"
-	vaulthandler "github.com/teejays/n-factor-vault/backend/src/vault/handler"
+	"github.com/teejays/n-factor-vault/backend/src/server/handler"
 )
 
 const (
@@ -37,21 +36,21 @@ func GetRoutes() []api.Route {
 			Method:      http.MethodPost,
 			Version:     ver1,
 			Path:        "signup",
-			HandlerFunc: userhandler.HandleSignup,
+			HandlerFunc: handler.HandleSignup,
 		},
 		// Login Handler
 		{
 			Method:      http.MethodPost,
 			Version:     ver1,
 			Path:        "login",
-			HandlerFunc: userhandler.HandleLogin,
+			HandlerFunc: handler.HandleLogin,
 		},
 		// Vault Create Handler
 		{
 			Method:       http.MethodPost,
 			Version:      ver1,
 			Path:         "vault",
-			HandlerFunc:  vaulthandler.HandleCreateVault,
+			HandlerFunc:  handler.HandleCreateVault,
 			Authenticate: true,
 		},
 		// Vault Get Vaults For User
@@ -59,14 +58,14 @@ func GetRoutes() []api.Route {
 			Method:       http.MethodGet,
 			Version:      ver1,
 			Path:         "vaults",
-			HandlerFunc:  vaulthandler.HandleGetVaults,
+			HandlerFunc:  handler.HandleGetVaults,
 			Authenticate: true,
 		},
 		{
 			Method:       http.MethodPost,
 			Version:      ver1,
 			Path:         "vault/{vault_id}/user",
-			HandlerFunc:  vaulthandler.HandleAddVaultUser,
+			HandlerFunc:  handler.HandleAddVaultUser,
 			Authenticate: true,
 		},
 	}
@@ -74,7 +73,7 @@ func GetRoutes() []api.Route {
 	return routes
 }
 
-// HandlePingRequest reponds with pong
+// HandlePingRequest responds with pong
 func HandlePingRequest(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte(`Pong!`))
 }

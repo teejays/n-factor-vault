@@ -7,7 +7,7 @@ import (
 	"github.com/teejays/clog"
 	"github.com/teejays/n-factor-vault/backend/library/go-api/apitest"
 	"github.com/teejays/n-factor-vault/backend/src/orm"
-	userhandler "github.com/teejays/n-factor-vault/backend/src/user/handler"
+	"github.com/teejays/n-factor-vault/backend/src/server/handler"
 )
 
 func init() {
@@ -46,7 +46,7 @@ func TestHandleSignup(t *testing.T) {
 	ts := apitest.TestSuite{
 		Route:         "/v1/signup",
 		Method:        http.MethodPost,
-		HandlerFunc:   userhandler.HandleSignup,
+		HandlerFunc:   handler.HandleSignup,
 		AfterTestFunc: func(t *testing.T) { orm.EmptyTestTables(t, relevantOrmObjs) },
 	}
 
@@ -130,7 +130,7 @@ func TestHandleLogin(t *testing.T) {
 	ts := apitest.TestSuite{
 		Route:          "/v1/login",
 		Method:         http.MethodPost,
-		HandlerFunc:    userhandler.HandleLogin,
+		HandlerFunc:    handler.HandleLogin,
 		BeforeTestFunc: helperCreateTestUsersT,
 		AfterTestFunc:  func(t *testing.T) { orm.EmptyTestTables(t, relevantOrmObjs) },
 	}
@@ -217,42 +217,5 @@ func TestHandleLogin(t *testing.T) {
 	}
 
 	ts.RunHandlerTests(t, tests)
-
-}
-
-func helperCreateTestUsersT(t *testing.T) {
-	err := helperCreateTestUsers()
-	if err != nil {
-		t.Error(err)
-	}
-}
-
-// A function to create test users
-func helperCreateTestUsers() error {
-
-	// Define the Handler Request to signup a user
-	p := apitest.HandlerReqParams{
-		Route:       "/v1/signup",
-		Method:      http.MethodPost,
-		HandlerFunc: userhandler.HandleSignup,
-	}
-
-	// Create User 1
-	if _, _, err := p.MakeHandlerRequest(
-		`{"name":"Jon Doe", "email":"jon.doe@email.com","password":"jons_secret"}`,
-		[]int{http.StatusCreated, http.StatusOK},
-	); err != nil {
-		return err
-	}
-
-	// Create User 2
-	if _, _, err := p.MakeHandlerRequest(
-		`{"name":"Jane Does", "email":"jane.does@email.com","password":"janes_secret"}`,
-		[]int{http.StatusCreated, http.StatusOK},
-	); err != nil {
-		return err
-	}
-
-	return nil
 
 }

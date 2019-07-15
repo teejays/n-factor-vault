@@ -90,6 +90,7 @@ github.com/teejays/clog v0.0.0-20181107215916-71000d459f17 h1:RvR224w0psQD5ZVw4C
 github.com/teejays/clog v0.0.0-20181107215916-71000d459f17/go.mod h1:dcMcIXOmrb2E1KjdiZZfE+Kjh+G+SLfkmwv+uIc+3QU=
 github.com/teejays/go-jwt v0.0.0-20190706230638-0b0c25b6a8f9 h1:EbBnBJwLJ7DyuElNBX2JC8nE8L6xtq10n5hGt6cuC/E=
 github.com/teejays/go-jwt v0.0.0-20190706230638-0b0c25b6a8f9/go.mod h1:0grmDDt8tPnYLjiVcPfndLwYx0kVOWQMB9OE1+/41h4=
+github.com/teejays/n-factor-vault v0.0.0-20190715012729-c8d9c0fc754d h1:hcEMV0IG9e201xEBzIXGz0C3f42O0EW/z+/YiTlzWH8=
 github.com/ziutek/mymysql v1.5.4/go.mod h1:LMSpPZ6DbqWFxNCHW77HeMg9I646SAhApZ/wKdgO/C0=
 go.opencensus.io v0.20.1/go.mod h1:6WKK9ahsWS3RSO+PY9ZHZUfv2irvY6gN279GOPZjmmk=
 golang.org/x/crypto v0.0.0-20180904163835-0709b304e793/go.mod h1:6SG95UA2DQfeDnfUPMdvaQW0Q7yPrPDi9nlGo2tz2b4=
