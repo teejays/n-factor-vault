@@ -68,6 +68,34 @@ func GetRoutes() []api.Route {
 			HandlerFunc:  handler.HandleAddVaultUser,
 			Authenticate: true,
 		},
+		{
+			Method:       http.MethodPost,
+			Version:      ver1,
+			Path:         "vault/{vault_id}/secret",
+			HandlerFunc:  handler.HandleRequestSecret,
+			Authenticate: true,
+		},
+		{
+			Method:       http.MethodPatch,
+			Version:      ver1,
+			Path:         "vault/secret/{secret_request_id}",
+			HandlerFunc:  handler.HandleUpdateSecretStatus,
+			Authenticate: true,
+		},
+		{
+			Method:       http.MethodGet,
+			Version:      ver1,
+			Path:         "vault/secret/{secret_request_id}/status",
+			HandlerFunc:  handler.HandleGetSecretStatus,
+			Authenticate: true,
+		},
+		{
+			Method:       http.MethodGet,
+			Version:      ver1,
+			Path:         "vault/secret/{secret_request_id}",
+			HandlerFunc:  handler.HandleGetSecret,
+			Authenticate: true,
+		},
 	}
 
 	return routes

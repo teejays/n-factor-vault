@@ -18,7 +18,13 @@ func GetNewID() ID {
 }
 
 // StrToID takes a string and converts it to type ID.
-// It returns an error is the string cannot be converted to type ID.
+// It returns an error if the string cannot be converted to type ID.
 func StrToID(str string) (ID, error) {
 	return ID(str), nil
+}
+
+// IDToStr takes an ID and converts it to type string.
+// It returns an error if the ID cannot be converted to type string.
+func IDToStr(id ID) (string, error) {
+	return string(id), nil
 }
