@@ -19,7 +19,7 @@ type BaseModel struct {
 func (m *BaseModel) BeforeInsert() {
 	// If we are saving an entity, and it doesn't have an ID,
 	// then get a new ID and add it
-	if m.ID == "" {
+	if m.ID.IsEmpty() {
 		m.ID = GetNewID()
 	}
 }
