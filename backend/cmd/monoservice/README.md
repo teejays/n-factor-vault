@@ -27,10 +27,17 @@ You can run the available tests using:
 make dev-go-test
 ```
 
+You can cleanup the locally created files (such as DB stuff, binaries) and return to a clean slate using:
+```
+make dev-clean
+```
+
+_Note_: While you run these _make_ commands, you might notice some errors in the terminal that are followed by keyword `(ignored)`. Those errors are to be expected under certain scenarios and can be ignored. E.g. a make command trying to stop the DB server but DB server is already stopped will result in an ignorable error.
+
 ### **Usage**
 Once the server is running, it exposes a REST API that can be used to interact with the application. Sample HTTP requests for some available endpoints is in the example directory, and also listed below:
 
-_Note_: Replace <TOKEN> with JWT auth token.
+_Note 1_: Replace <TOKEN> with JWT auth token.
 
 * **Signup**: Create a new user
 
