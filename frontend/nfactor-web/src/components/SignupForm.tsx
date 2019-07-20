@@ -19,7 +19,7 @@ interface Props extends FormProps {
 // LoginForm renders the actual form needed for login. It takes a handlerLogin() prop, and no stores no state.
 // The first param in 'React.Component<Props, {}>', 'Props' are the props and the second param '{}' is the type of the state.
 class LoginFormBase extends React.Component<Props, {}> {
-  path = 'login';
+  path = 'signup';
   handleSubmit = (e: React.FormEvent) => {
     // I don't know what this does
     e.preventDefault();
@@ -57,8 +57,18 @@ class LoginFormBase extends React.Component<Props, {}> {
           onSubmit={this.handleSubmit}
           style={this.props.styles ? this.props.styles : {}}>
           <Form.Item>
+            {getFieldDecorator('name', {
+              rules: [{required: true, message: 'Please enter your name!'}],
+            })(
+              <Input
+                prefix={<Icon type="user" style={{color: 'rgba(0,0,0,.25)'}} />}
+                placeholder="Name"
+              />,
+            )}
+          </Form.Item>
+          <Form.Item>
             {getFieldDecorator('email', {
-              rules: [{required: true, message: 'Please input your email!'}],
+              rules: [{required: true, message: 'Please enter your email!'}],
             })(
               <Input
                 prefix={<Icon type="mail" style={{color: 'rgba(0,0,0,.25)'}} />}
@@ -81,7 +91,7 @@ class LoginFormBase extends React.Component<Props, {}> {
             <Button
               type="primary"
               htmlType="submit"
-              className="login-form-button"
+              className="signup-form-button"
               style={{width: '100%'}}>
               Log in
             </Button>
@@ -93,4 +103,4 @@ class LoginFormBase extends React.Component<Props, {}> {
   }
 }
 
-export const LoginForm = Form.create<Props>()(LoginFormBase);
+export const SignupForm = Form.create<Props>()(LoginFormBase);

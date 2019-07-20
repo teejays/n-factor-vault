@@ -4,6 +4,7 @@ import {BrowserRouter as Router, Route} from 'react-router-dom';
 import './App.css';
 import {PublicLayout} from './layouts/PublicLayout';
 import {LoginPage} from './pages/login/LoginPage';
+import {SignupPage} from './pages/signup/SignupPage';
 
 const App: React.FC = () => {
   return (
@@ -15,6 +16,7 @@ const App: React.FC = () => {
       <Router>
         <div className="router">
           <Route exact path="/" component={withLayout(<LoginPage />)} />
+          <Route exact path="/signup" component={withLayout(<SignupPage />)} />
         </div>
       </Router>
     </div>
