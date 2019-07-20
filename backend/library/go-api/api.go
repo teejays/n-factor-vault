@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 	"github.com/teejays/clog"
 )
@@ -19,7 +20,7 @@ func StartServer(addr string, port int, routes []Route, authMiddlewareFunc Middl
 	http.Handle("/", m)
 
 	// Start the server
-	clog.Infof("HTTP Server listenining on: %s:%d", addr, port)
+	clog.Infof("HTTP Server listening on: %s:%d", addr, port)
 
 	err = http.ListenAndServe(fmt.Sprintf("%s:%d", addr, port), nil)
 	if err != nil {
@@ -70,7 +71,15 @@ func GetHandler(routes []Route, authMiddlewareFunc MiddlewareFunc, preMiddleware
 		m.Use(mux.MiddlewareFunc(mw))
 	}
 
-	return m, nil
+	// Enable CORS
+	// TODO: Have tighter control over CORS policy, but okay for
+	// as long as we're just developing. This shouldn't really go on prod.
+	originsOk := handlers.AllowedOrigins([]string{"*"})
+	headersOk := handlers.AllowedHeaders([]string{"content-type"})
+	methodsOk := handlers.AllowedMethods([]string{"GET", "HEAD", "POST", "PUT", "OPTIONS"})
+	h := handlers.CORS(originsOk, headersOk, methodsOk)(m)
+
+	return h, nil
 }
 
 // MiddlewareFunc can be inserted in a server for processing
