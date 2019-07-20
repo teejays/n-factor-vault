@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/teejays/clog"
+	"github.com/teejays/n-factor-vault/backend/library/id"
 	"github.com/teejays/n-factor-vault/backend/src/orm"
 	"github.com/teejays/n-factor-vault/backend/src/vault"
 )
@@ -18,38 +19,38 @@ var gServiceName = "Secret Service" //LOL
 // Secret stores the secrets of vaults
 type Secret struct {
 	orm.BaseModel `xorm:"extends"`
-	VaultID       orm.ID `xorm:"notnull unique(secret)" json:"vault_id"`
+	VaultID       id.ID  `xorm:"notnull unique(secret)" json:"vault_id"`
 	Secret        string `xorm:"notnull" json:"secret"`
 }
 
 // SecretRequest stores the requests users make to reveal vault secrets
 type SecretRequest struct {
 	orm.BaseModel `xorm:"extends"`
-	UserID        orm.ID `xorm:"notnull" json:"user_id"`
-	VaultID       orm.ID `xorm:"notnull" json:"vault_id"`
-	Approved      bool   `xorm:"notnull default false" json:"approved"`
+	UserID        id.ID `xorm:"notnull" json:"user_id"`
+	VaultID       id.ID `xorm:"notnull" json:"vault_id"`
+	Approved      bool  `xorm:"notnull default false" json:"approved"`
 }
 
 // SecretApproval stores the approvals for reveal requests
 type SecretApproval struct {
 	orm.BaseModel   `xorm:"extends"`
-	SecretRequestID orm.ID `xorm:"notnull" json:"secret_request_id"`
-	UserID          orm.ID `xorm:"notnull" json:"user_id"`
-	Approved        bool   `xorm:"default null" json:"approved"`
+	SecretRequestID id.ID `xorm:"notnull" json:"secret_request_id"`
+	UserID          id.ID `xorm:"notnull" json:"user_id"`
+	Approved        bool  `xorm:"default null" json:"approved"`
 }
 
 func init() {
-	err := orm.RegisterModel(&Secret{})
+	err := orm.AutoMigrate(&Secret{})
 	if err != nil {
 		clog.FatalErr(err)
 	}
 
-	err = orm.RegisterModel(&SecretRequest{})
+	err = orm.AutoMigrate(&SecretRequest{})
 	if err != nil {
 		clog.FatalErr(err)
 	}
 
-	err = orm.RegisterModel(&SecretApproval{})
+	err = orm.AutoMigrate(&SecretApproval{})
 	if err != nil {
 		clog.FatalErr(err)
 	}
@@ -61,28 +62,28 @@ func init() {
 
 // RequestParams are the parameters for a request to reveal a vault's secret
 type RequestParams struct {
-	VaultID orm.ID
-	UserID  orm.ID
+	VaultID id.ID
+	UserID  id.ID
 }
 
 // UpdateParams are the parameters to update the reveal secret status (approve/reject)
 type UpdateParams struct {
-	SecretRequestID orm.ID
-	UserID          orm.ID
+	SecretRequestID id.ID
+	UserID          id.ID
 	Approval        bool
 }
 
 // GetParams are the parameters to get the secret/secret status
 type GetParams struct {
-	SecretRequestID orm.ID
-	UserID          orm.ID
+	SecretRequestID id.ID
+	UserID          id.ID
 }
 
 // Status stores the information of the current approval status for the reveal secret request
 type Status struct {
-	SecretRequestID orm.ID
+	SecretRequestID id.ID
 	Approved        bool
-	Approvals       map[orm.ID]bool
+	Approvals       map[id.ID]bool
 }
 
 // Request creates a request to reveal a vault's secret for the current authenticated user
@@ -100,7 +101,7 @@ func Request(ctx context.Context, req RequestParams) (*Status, error) {
 		VaultID:  req.VaultID,
 		Approved: false,
 	}
-	rr.ID = orm.GetNewID()
+	rr.ID = id.GetNewID()
 	err = orm.InsertOne(&rr)
 	if err != nil {
 		return nil, err
@@ -121,13 +122,14 @@ func Request(ctx context.Context, req RequestParams) (*Status, error) {
 		if user.UserID == req.UserID {
 			ra.Approved = true
 		}
-		//TODO: fix this. Not sure why the BeforeInsert() is not triggering for InsertMulti
-		ra.ID = orm.GetNewID()
 		ras = append(ras, ra)
 	}
-	err = orm.InsertMulti(&ras)
-	if err != nil {
-		return nil, err
+
+	for _, v := range ras {
+		err := orm.InsertOne(&v)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	return GetStatus(ctx, GetParams{rr.ID, req.UserID})
@@ -137,38 +139,12 @@ func Request(ctx context.Context, req RequestParams) (*Status, error) {
 func UpdateStatus(ctx context.Context, req UpdateParams) (*Status, error) {
 	clog.Debugf("%s: updating the approval of secret of request %s", gServiceName, req.SecretRequestID)
 	//Update the approval of the secret status of this user
-	userID, err := orm.IDToStr(req.UserID)
-	if err != nil {
-		return nil, err
-	}
-	reqID, err := orm.IDToStr(req.SecretRequestID)
-	if err != nil {
-		return nil, err
-	}
-
-	requestConditions := map[string]string{
-		"user_id":           userID,
-		"secret_request_id": reqID,
-	}
-
-	//TODO: FindByColumn() and FindByColumns() both need to take in slices as the result interface
-	// Might make sense to make FindOneByColumn() and FindOneByColumns()
-	var sas []SecretApproval
-	err = orm.FindByColumns(map[string]interface{}{
-		"secret_request_id": req.SecretRequestID,
+	saConditions := map[string]interface{}{
 		"user_id":           req.UserID,
-	}, &sas)
-	if err != nil {
-		return nil, err
+		"secret_request_id": req.SecretRequestID,
 	}
 
-	if len(sas) != 1 {
-		return nil, fmt.Errorf("%s: expected %d secret approvals but got %d", gServiceName, 1, len(sas))
-	}
-	sa := sas[0]
-	sa.Approved = true
-
-	err = orm.Update(requestConditions, sa)
+	err := orm.UpdateByColumn(saConditions, SecretApproval{Approved: true})
 	if err != nil {
 		return nil, err
 	}
@@ -184,19 +160,7 @@ func UpdateStatus(ctx context.Context, req UpdateParams) (*Status, error) {
 				return GetStatus(ctx, GetParams{req.SecretRequestID, req.UserID})
 			}
 		}
-		var srs []SecretRequest
-		err = orm.FindByColumn("id", req.SecretRequestID, &srs)
-		if err != nil {
-			return nil, err
-		}
-
-		if len(srs) != 1 {
-			return nil, fmt.Errorf("%s: expected %d secret approvals but got %d", gServiceName, 1, len(srs))
-		}
-		sr := srs[0]
-		sr.Approved = true
-
-		err = orm.Update(map[string]string{"id": reqID}, sr)
+		err = orm.UpdateByColumn(map[string]interface{}{"id": req.SecretRequestID}, SecretRequest{Approved: true})
 		if err != nil {
 			return nil, err
 		}
@@ -215,7 +179,7 @@ func GetStatus(ctx context.Context, req GetParams) (*Status, error) {
 	var srs []SecretRequest
 	var sas []SecretApproval
 	//Get the secret request
-	err := orm.FindByColumn("id", req.SecretRequestID, &srs)
+	_, err := orm.FindByColumn("id", req.SecretRequestID, &srs)
 	if err != nil {
 		return nil, err
 	}
@@ -226,12 +190,12 @@ func GetStatus(ctx context.Context, req GetParams) (*Status, error) {
 	s.Approved = srs[0].Approved
 
 	//Get the secret approvals
-	err = orm.FindByColumn("secret_request_id", req.SecretRequestID, &sas)
+	_, err = orm.FindByColumn("secret_request_id", req.SecretRequestID, &sas)
 	if err != nil {
 		return nil, err
 	}
 
-	s.Approvals = make(map[orm.ID]bool)
+	s.Approvals = make(map[id.ID]bool)
 	for _, sa := range sas {
 		s.Approvals[sa.UserID] = sa.Approved
 	}
@@ -255,7 +219,7 @@ func Get(ctx context.Context, req GetParams) (*Secret, error) {
 	//Get the secret
 	var srs []SecretRequest
 	//Get the secret request
-	err = orm.FindByColumn("id", req.SecretRequestID, &srs)
+	_, err = orm.FindByColumn("id", req.SecretRequestID, &srs)
 	if err != nil {
 		return nil, err
 	}
@@ -264,7 +228,7 @@ func Get(ctx context.Context, req GetParams) (*Secret, error) {
 	}
 
 	var ss []Secret
-	err = orm.FindByColumn("vault_id", srs[0].VaultID, &ss)
+	_, err = orm.FindByColumn("vault_id", srs[0].VaultID, &ss)
 	if err != nil {
 		return nil, err
 	}

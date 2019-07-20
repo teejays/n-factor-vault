@@ -7,6 +7,7 @@ import (
 
 	"github.com/teejays/clog"
 	pwd "github.com/teejays/n-factor-vault/backend/library/go-pwd"
+	"github.com/teejays/n-factor-vault/backend/library/id"
 	"github.com/teejays/n-factor-vault/backend/src/orm"
 )
 
@@ -15,22 +16,19 @@ import (
 * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 type User struct {
-	orm.BaseModel `xorm:"extends"`
-	Name          string `xorm:"notnull" json:"name"`
-	Email         string `xorm:"unique notnull" json:"email"`
+	orm.BaseModel `gorm:"embedded"`
+	Name          string
+	Email         string
 }
 
 type UserSecure struct {
-	User               `xorm:"extends"`
-	pwd.SecurePassword `xorm:"extends"`
+	User               `gorm:"embedded"`
+	pwd.SecurePassword `gorm:"embedded"`
 }
 
 func init() {
 	// 1. Setup User ORM Model
-	err := orm.RegisterModel(&UserSecure{})
-	if err != nil {
-		clog.FatalErr(err)
-	}
+	orm.AutoMigrate(&UserSecure{})
 }
 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
@@ -111,18 +109,15 @@ func CreateUser(req CreateUserRequest) (*User, error) {
 	}
 
 	// Save to DB
-	err = orm.InsertOne(&u)
-	if err != nil {
-		return nil, err
-	}
+	orm.InsertOne(&u)
 
 	return &u.User, nil
 }
 
 // GetUser provides the single user with the ID id
-func GetUser(id orm.ID) (*User, error) {
+func GetUser(id id.ID) (*User, error) {
 	var su UserSecure
-	exists, err := orm.GetByID(id, &su)
+	exists, err := orm.FindByID(id, &su)
 	if err != nil {
 		return nil, err
 	}
@@ -137,7 +132,7 @@ func GetUser(id orm.ID) (*User, error) {
 }
 
 // GetUsers returns an slice of users given the userIDs passed
-func GetUsers(ids ...orm.ID) ([]*User, error) {
+func GetUsers(ids ...id.ID) ([]*User, error) {
 	var users []*User
 	for _, id := range ids {
 		u, err := GetUser(id)
@@ -170,7 +165,7 @@ func getUserByEmail(email string) (*User, error) {
 
 func getSecureUserByEmail(email string) (*UserSecure, error) {
 	var su UserSecure
-	exists, err := orm.GetByColumn("email", email, &su)
+	exists, err := orm.FindByColumn("email", email, &su)
 	if err != nil {
 		return nil, err
 	}

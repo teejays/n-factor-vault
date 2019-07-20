@@ -6,8 +6,8 @@ import (
 
 	"github.com/teejays/clog"
 	"github.com/teejays/n-factor-vault/backend/library/go-api"
+	"github.com/teejays/n-factor-vault/backend/library/id"
 	"github.com/teejays/n-factor-vault/backend/src/auth"
-	"github.com/teejays/n-factor-vault/backend/src/orm"
 	"github.com/teejays/n-factor-vault/backend/src/vault"
 )
 
@@ -25,13 +25,13 @@ func HandleCreateVault(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Populate the AdminUserID field of req using the authenticated userID
+	// Populate the UserID field of req using the authenticated userID
 	u, err := auth.GetUserFromContext(r.Context())
 	if err != nil {
 		api.WriteError(w, http.StatusInternalServerError, err, true, nil)
 		return
 	}
-	req.AdminUserID = u.ID
+	req.UserID = u.ID
 
 	// Attempt login and get the token
 	v, err := vault.CreateVault(r.Context(), req)
@@ -47,7 +47,7 @@ func HandleCreateVault(w http.ResponseWriter, r *http.Request) {
 // HandleGetVaults (GET) returns the vaults that the authenticated user is a part of
 func HandleGetVaults(w http.ResponseWriter, r *http.Request) {
 
-	// Populate the AdminUserID field of req using the authenticated userID
+	// Populate the UserID field of req using the authenticated userID
 	u, err := auth.GetUserFromContext(r.Context())
 	if err != nil {
 		api.WriteError(w, http.StatusInternalServerError, err, true, nil)
@@ -90,7 +90,7 @@ func HandleAddVaultUser(w http.ResponseWriter, r *http.Request) {
 		api.WriteError(w, http.StatusBadRequest, err, false, nil)
 		return
 	}
-	req.VaultID, err = orm.StrToID(vaultID)
+	req.VaultID, err = id.StrToID(vaultID)
 	if err != nil {
 		api.WriteError(w, http.StatusBadRequest, err, false, nil)
 		return

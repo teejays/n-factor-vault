@@ -5,8 +5,8 @@ import (
 
 	"github.com/teejays/clog"
 	"github.com/teejays/n-factor-vault/backend/library/go-api"
+	"github.com/teejays/n-factor-vault/backend/library/id"
 	"github.com/teejays/n-factor-vault/backend/src/auth"
-	"github.com/teejays/n-factor-vault/backend/src/orm"
 	"github.com/teejays/n-factor-vault/backend/src/secret"
 )
 
@@ -24,7 +24,7 @@ func HandleRequestSecret(w http.ResponseWriter, r *http.Request) {
 		api.WriteError(w, http.StatusBadRequest, err, false, nil)
 		return
 	}
-	req.VaultID, err = orm.StrToID(vaultID)
+	req.VaultID, err = id.StrToID(vaultID)
 	if err != nil {
 		api.WriteError(w, http.StatusBadRequest, err, false, nil)
 		return
@@ -63,7 +63,7 @@ func HandleUpdateSecretStatus(w http.ResponseWriter, r *http.Request) {
 		api.WriteError(w, http.StatusBadRequest, err, false, nil)
 		return
 	}
-	req.SecretRequestID, err = orm.StrToID(secretRequestIDStr)
+	req.SecretRequestID, err = id.StrToID(secretRequestIDStr)
 	if err != nil {
 		api.WriteError(w, http.StatusBadRequest, err, false, nil)
 		return
@@ -96,7 +96,7 @@ func HandleGetSecretStatus(w http.ResponseWriter, r *http.Request) {
 		api.WriteError(w, http.StatusBadRequest, err, false, nil)
 		return
 	}
-	secretRequestID, err := orm.StrToID(secretRequestIDStr)
+	secretRequestID, err := id.StrToID(secretRequestIDStr)
 	if err != nil {
 		api.WriteError(w, http.StatusBadRequest, err, false, nil)
 		return
@@ -126,7 +126,7 @@ func HandleGetSecret(w http.ResponseWriter, r *http.Request) {
 		api.WriteError(w, http.StatusBadRequest, err, false, nil)
 		return
 	}
-	secretRequestID, err := orm.StrToID(secretRequestIDStr)
+	secretRequestID, err := id.StrToID(secretRequestIDStr)
 	if err != nil {
 		api.WriteError(w, http.StatusBadRequest, err, false, nil)
 		return

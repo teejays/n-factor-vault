@@ -11,7 +11,7 @@ import (
 	jwt "github.com/teejays/go-jwt"
 
 	"github.com/teejays/n-factor-vault/backend/library/go-api"
-	"github.com/teejays/n-factor-vault/backend/src/orm"
+	"github.com/teejays/n-factor-vault/backend/library/id"
 	"github.com/teejays/n-factor-vault/backend/src/user"
 )
 
@@ -96,7 +96,7 @@ func Login(creds LoginCredentials) (LoginResponse, error) {
 // JWTClaim is the data that will be stored in the JWT token
 type JWTClaim struct {
 	jwt.BaseClaim
-	UserID orm.ID `json:"uid"`
+	UserID id.ID `json:"uid"`
 }
 
 // generateToken creates and returns an authentication token for the user
@@ -216,9 +216,9 @@ func GetUserFromContext(ctx context.Context) (*user.User, error) {
 	if v == nil {
 		return nil, ErrNotAuthenticated
 	}
-	userID, ok := v.(orm.ID)
+	userID, ok := v.(id.ID)
 	if !ok {
-		clog.Errorf("auth: gCtxKeyUserID value in context cannot be converted to orm.ID: %v", v)
+		clog.Errorf("auth: gCtxKeyUserID value in context cannot be converted to id.ID: %v", v)
 		return nil, ErrNotAuthenticated
 	}
 	if userID == "" {
@@ -267,9 +267,9 @@ func IsContextAuthenticated(ctx context.Context) bool {
 		clog.Warn("auth: IsContextAuthenticated: gCtxKeyUserID is nil in context")
 		return false
 	}
-	userID, ok := v2.(orm.ID)
+	userID, ok := v2.(id.ID)
 	if !ok {
-		clog.Errorf("auth: gCtxKeyUserID value in context cannot be converted to orm.ID: %v", v2)
+		clog.Errorf("auth: gCtxKeyUserID value in context cannot be converted to id.ID: %v", v2)
 		return false
 	}
 	if userID == "" {

@@ -1,4 +1,4 @@
-package orm
+package id
 
 import "github.com/google/uuid"
 

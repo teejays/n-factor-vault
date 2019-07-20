@@ -1,61 +1,31 @@
-// Package orm follows a singleton pattern, which means that all
-// packages will probably share the DB (for now).
 package orm
 
 import (
 	"fmt"
-	"reflect"
 
-	"github.com/go-xorm/xorm"
+	"github.com/jinzhu/gorm"
+	_ "github.com/jinzhu/gorm/dialects/postgres"
 	"github.com/teejays/clog"
-	"xorm.io/core"
-
-	// this is needed to support postgres connection
-	_ "github.com/lib/pq"
-
 	"github.com/teejays/n-factor-vault/backend/library/env"
+	"github.com/teejays/n-factor-vault/backend/library/id"
 )
 
-var gEngine *xorm.Engine
-var gDriverName = "postgres"
-var gTableNamePrefix = "tb_"
+var gDBConn *gorm.DB
 
 func init() {
-	err := initEngine(gDriverName)
-	if err != nil {
-		clog.Fatalf("Could not get up new xorm.Engine: %v", err)
-	}
-}
-
-func initEngine(driverName string) error {
-	clog.Debug("orm: Initializing ORM engine")
 	connStr, err := getPostgresConnectionString()
 	if err != nil {
-		return err
+		clog.Fatalf("Could not connect get postgres connection string: %v", err)
 	}
-	clog.Debugf("xorm -> Postgres: connection string: %s", connStr)
 
-	gEngine, err = xorm.NewEngine(driverName, connStr)
+	db, err := gorm.Open("postgres", connStr)
 	if err != nil {
-		return err
+		clog.Fatalf("Could not connect to database: %v", err)
 	}
-
-	tbMapper := core.NewPrefixMapper(core.SnakeMapper{}, gTableNamePrefix)
-	gEngine.SetTableMapper(tbMapper)
-	gEngine.SetColumnMapper(core.GonicMapper{})
-
-	// Only set these settings if DEV
-	if env.GetEnv() == env.DEV {
-		clog.Warnf("orm: setting high log level")
-		gEngine.ShowSQL(true)
-		gEngine.Logger().SetLevel(core.LOG_DEBUG)
-	}
-
-	return nil
+	gDBConn = db
 }
 
 func getPostgresConnectionString() (string, error) {
-
 	// Get the port
 	port, err := env.GetEnvVarInt("POSTGRES_PORT")
 	if err != nil {
@@ -74,22 +44,88 @@ func getPostgresConnectionString() (string, error) {
 		return "", err
 	}
 
-	return fmt.Sprintf("postgres://%s:%d/%s?sslmode=disable", host, port, dbName), nil
+	return fmt.Sprintf("host=%s port=%d dbname=%s sslmode=disable", host, port, dbName), nil
 }
 
-func errWithContext(err error) error {
-	if err != nil {
-		err = fmt.Errorf("xorm error: %v", err)
-	}
-	return err
+func AutoMigrate(v interface{}) error {
+	return gDBConn.AutoMigrate(v).Error
 }
 
-func RegisterModel(v interface{}) error {
-	clog.Debugf("orm: syncing DB with type %v", reflect.TypeOf(v))
-	// TODO: Do we need to ensure that v is of type pointer?
-	err := gEngine.Cascade(true).Sync2(v)
-	if err != nil {
-		return errWithContext(err)
+func InsertOne(v interface{}) error {
+	return gDBConn.Create(v).Error
+}
+
+func Save(v interface{}) error {
+	return gDBConn.Save(v).Error
+}
+
+func UpdateByColumn(conditions map[string]interface{}, v interface{}) error {
+	db := gDBConn
+	for col, val := range conditions {
+		db = db.Where(fmt.Sprintf("%s = ?", col), val)
 	}
-	return nil
+	return db.Model(v).Updates(v).Error
+}
+
+func FindByID(id id.ID, v interface{}) (bool, error) {
+	err := gDBConn.Where("id = ?", id).First(v).Error
+	if err != nil {
+		if gorm.IsRecordNotFoundError(err) {
+			return false, nil
+		}
+		return false, err
+	}
+	return true, nil
+}
+
+func FindByColumn(colName string, colVal, v interface{}) (bool, error) {
+	err := gDBConn.Where(map[string]interface{}{colName: colVal}).Find(v).Error
+	if err != nil {
+		if gorm.IsRecordNotFoundError(err) {
+			return false, nil
+		}
+		return false, err
+	}
+	return true, nil
+}
+
+func FindOneByColumn(colName string, colVal, v interface{}) (bool, error) {
+	err := gDBConn.Where(map[string]interface{}{colName: colVal}).First(v).Error
+	if err != nil {
+		if gorm.IsRecordNotFoundError(err) {
+			return false, nil
+		}
+		return false, err
+	}
+	return true, nil
+}
+
+func FindOne(conditions map[string]interface{}, v interface{}) (bool, error) {
+	db := gDBConn
+	for col, val := range conditions {
+		db = db.Where(fmt.Sprintf("%s = ?", col), val)
+	}
+	err := db.First(v).Error
+	if err != nil {
+		if gorm.IsRecordNotFoundError(err) {
+			return false, nil
+		}
+		return false, err
+	}
+	return true, nil
+}
+
+func Find(conditions map[string]interface{}, v interface{}) (bool, error) {
+	db := gDBConn
+	for col, val := range conditions {
+		db = db.Where(fmt.Sprintf("%s = ?", col), val)
+	}
+	err := db.Find(v).Error
+	if err != nil {
+		if gorm.IsRecordNotFoundError(err) {
+			return false, nil
+		}
+		return false, err
+	}
+	return true, nil
 }
