@@ -1,6 +1,3 @@
-// TODO: Make this file a module with functions (?)
-import React from 'react';
-
 // getURL provides the full URL for the API http request
 const getURL = (path: string) => {
   const baseURL = 'localhost:8080/v1';

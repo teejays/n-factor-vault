@@ -4,7 +4,7 @@ import {Link} from 'react-router-dom';
 import {Form, Icon, Input, Button, Row} from 'antd';
 import {WrappedFormUtils} from 'antd/lib/form/Form';
 
-import {makeRequest} from '../utils/api';
+import {makeRequest} from 'utils/api';
 
 export interface FormProps {
   form: WrappedFormUtils;

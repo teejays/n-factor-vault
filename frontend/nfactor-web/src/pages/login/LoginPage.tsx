@@ -2,10 +2,12 @@ import React from 'react';
 
 import {Typography, Row} from 'antd';
 
-import {LoginForm} from '../../components/LoginForm';
+import {LoginForm} from 'components/LoginForm';
 
 export const LoginPage = () => {
-  const handler = () => {};
+  const handler = () => {
+    console.log('Login worked!');
+  };
   const {Title} = Typography;
   return (
     <>
@@ -21,7 +23,7 @@ export const LoginPage = () => {
         justify="center"
         align="middle"
         style={{textAlign: 'center', minHeight: 400}}>
-        <LoginForm handleSuccess={() => {}} styles={{maxWidth: '300'}} />
+        <LoginForm handleSuccess={handler} styles={{maxWidth: '300'}} />
       </Row>
     </>
   );

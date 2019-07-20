@@ -2,10 +2,12 @@ import React from 'react';
 
 import {Typography, Row} from 'antd';
 
-import {SignupForm} from '../../components/SignupForm';
+import {SignupForm} from 'components/SignupForm';
 
 export const SignupPage = () => {
-  const handler = () => {};
+  const handler = () => {
+    console.log('Signup Up - Try logging in');
+  };
   const {Title} = Typography;
   return (
     <>
@@ -21,12 +23,7 @@ export const SignupPage = () => {
         justify="center"
         align="middle"
         style={{textAlign: 'center', minHeight: 400}}>
-        <SignupForm
-          handleSuccess={() => {
-            console.log('Signup Up - Try logging in');
-          }}
-          styles={{maxWidth: '300'}}
-        />
+        <SignupForm handleSuccess={handler} styles={{maxWidth: '300'}} />
       </Row>
     </>
   );
