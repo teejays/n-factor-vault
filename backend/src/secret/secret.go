@@ -40,17 +40,17 @@ type SecretApproval struct {
 }
 
 func init() {
-	err := orm.AutoMigrate(&Secret{})
+	err := orm.RegisterModel(&Secret{})
 	if err != nil {
 		clog.FatalErr(err)
 	}
 
-	err = orm.AutoMigrate(&SecretRequest{})
+	err = orm.RegisterModel(&SecretRequest{})
 	if err != nil {
 		clog.FatalErr(err)
 	}
 
-	err = orm.AutoMigrate(&SecretApproval{})
+	err = orm.RegisterModel(&SecretApproval{})
 	if err != nil {
 		clog.FatalErr(err)
 	}

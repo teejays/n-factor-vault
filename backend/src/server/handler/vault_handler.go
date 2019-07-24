@@ -31,7 +31,7 @@ func HandleCreateVault(w http.ResponseWriter, r *http.Request) {
 		api.WriteError(w, http.StatusInternalServerError, err, true, nil)
 		return
 	}
-	req.UserID = u.ID
+	req.AdminUserID = u.ID
 
 	// Attempt login and get the token
 	v, err := vault.CreateVault(r.Context(), req)

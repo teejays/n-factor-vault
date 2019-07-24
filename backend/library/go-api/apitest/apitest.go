@@ -35,12 +35,12 @@ type HandlerTest struct {
 	Name    string
 	Content string
 
-	BeforeRunFunc        func(*testing.T)
-	AfterRunFunc         func(*testing.T)
-	AuthBeaererTokenFunc func(*testing.T) string
-	SkipAuthToken        bool
-	SkipBeforeTestFunc   bool
-	SkipAfterTestFunc    bool
+	BeforeRunFunc       func(*testing.T)
+	AfterRunFunc        func(*testing.T)
+	AuthBearerTokenFunc func(*testing.T) string
+	SkipAuthToken       bool
+	SkipBeforeTestFunc  bool
+	SkipAfterTestFunc   bool
 
 	WantStatusCode      int
 	WantContent         string
@@ -95,8 +95,8 @@ func (ts TestSuite) RunHandlerTest(t *testing.T, tt HandlerTest) {
 	if ts.AuthBearerTokenFunc != nil && !tt.SkipAuthToken {
 		authBearerToken = ts.AuthBearerTokenFunc(t)
 	}
-	if tt.AuthBeaererTokenFunc != nil && !tt.SkipAuthToken {
-		authBearerToken = tt.AuthBeaererTokenFunc(t)
+	if tt.AuthBearerTokenFunc != nil && !tt.SkipAuthToken {
+		authBearerToken = tt.AuthBearerTokenFunc(t)
 	}
 
 	// Create the HTTP request and response

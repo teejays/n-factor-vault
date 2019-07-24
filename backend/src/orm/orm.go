@@ -6,11 +6,15 @@ import (
 	"github.com/jinzhu/gorm"
 	_ "github.com/jinzhu/gorm/dialects/postgres"
 	"github.com/teejays/clog"
+
 	"github.com/teejays/n-factor-vault/backend/library/env"
 	"github.com/teejays/n-factor-vault/backend/library/id"
 )
 
-var gDBConn *gorm.DB
+// TODO: type DB {*gorm.DB} would just allows us to add more wrapper functions
+// over *gorm.DB
+
+var gDB *gorm.DB
 
 func init() {
 	connStr, err := getPostgresConnectionString()
@@ -22,7 +26,11 @@ func init() {
 	if err != nil {
 		clog.Fatalf("Could not connect to database: %v", err)
 	}
-	gDBConn = db
+	if env.GetEnv() == env.DEV || env.GetEnv() == env.TEST {
+		db.LogMode(true)
+	}
+	gDB = db
+	clog.Infof("orm: DB connection opened: %+v", gDB)
 }
 
 func getPostgresConnectionString() (string, error) {
@@ -47,28 +55,37 @@ func getPostgresConnectionString() (string, error) {
 	return fmt.Sprintf("host=%s port=%d dbname=%s sslmode=disable", host, port, dbName), nil
 }
 
-func AutoMigrate(v interface{}) error {
-	return gDBConn.AutoMigrate(v).Error
+func RegisterModel(v interface{}) error {
+	clog.Infof("orm: Registering model %T", v)
+	return gDB.AutoMigrate(v).Error
 }
 
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+* M U T A T E
+* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+
 func InsertOne(v interface{}) error {
-	return gDBConn.Create(v).Error
+	return gDB.Create(v).Error
 }
 
 func Save(v interface{}) error {
-	return gDBConn.Save(v).Error
+	return gDB.Save(v).Error
 }
 
 func UpdateByColumn(conditions map[string]interface{}, v interface{}) error {
-	db := gDBConn
+	db := gDB
 	for col, val := range conditions {
 		db = db.Where(fmt.Sprintf("%s = ?", col), val)
 	}
 	return db.Model(v).Updates(v).Error
 }
 
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+* Q U E R Y
+* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+
 func FindByID(id id.ID, v interface{}) (bool, error) {
-	err := gDBConn.Where("id = ?", id).First(v).Error
+	err := gDB.Where("id = ?", id).First(v).Error
 	if err != nil {
 		if gorm.IsRecordNotFoundError(err) {
 			return false, nil
@@ -79,7 +96,7 @@ func FindByID(id id.ID, v interface{}) (bool, error) {
 }
 
 func FindByColumn(colName string, colVal, v interface{}) (bool, error) {
-	err := gDBConn.Where(map[string]interface{}{colName: colVal}).Find(v).Error
+	err := gDB.Where(map[string]interface{}{colName: colVal}).Find(v).Error
 	if err != nil {
 		if gorm.IsRecordNotFoundError(err) {
 			return false, nil
@@ -90,7 +107,7 @@ func FindByColumn(colName string, colVal, v interface{}) (bool, error) {
 }
 
 func FindOneByColumn(colName string, colVal, v interface{}) (bool, error) {
-	err := gDBConn.Where(map[string]interface{}{colName: colVal}).First(v).Error
+	err := gDB.Where(map[string]interface{}{colName: colVal}).First(v).Error
 	if err != nil {
 		if gorm.IsRecordNotFoundError(err) {
 			return false, nil
@@ -101,7 +118,7 @@ func FindOneByColumn(colName string, colVal, v interface{}) (bool, error) {
 }
 
 func FindOne(conditions map[string]interface{}, v interface{}) (bool, error) {
-	db := gDBConn
+	db := gDB
 	for col, val := range conditions {
 		db = db.Where(fmt.Sprintf("%s = ?", col), val)
 	}
@@ -116,7 +133,7 @@ func FindOne(conditions map[string]interface{}, v interface{}) (bool, error) {
 }
 
 func Find(conditions map[string]interface{}, v interface{}) (bool, error) {
-	db := gDBConn
+	db := gDB
 	for col, val := range conditions {
 		db = db.Where(fmt.Sprintf("%s = ?", col), val)
 	}

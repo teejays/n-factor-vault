@@ -11,7 +11,7 @@ dev-run: dev-db-stop dev-db-start dev-bin-run
 ## PROJECT BUILD
 dev-build: dev-bin-build
 ## CLEAN UP
-dev-clean: dev-bin-clean dev-db-clean dev-db-test-clean
+dev-destroy: dev-bin-destroy dev-db-destroy dev-db-test-destroy
 
 ## BINARY
 BIN_NAME=$(PROJECT_NAME).bin
@@ -22,7 +22,7 @@ dev-bin-build:
 	$(GO_BUILD) -o $(BIN_NAME) main.go 
 dev-bin-run: dev-bin-build
 	$(DEV_ENV_VARS) ./$(BIN_NAME)
-dev-bin-clean:
+dev-bin-destroy:
 	-rm ./$(BIN_NAME)
 
 # TEST - BACKEND CODE
@@ -42,7 +42,14 @@ dev-db-setup: install-postgres dev-db-stop
 	-pg_ctl -D $(DEV_DB_DIR) -l $(DEV_DB_DIR)/postgres.log start
 	-createdb $(DEV_DB_NAME)
 	pg_ctl -D $(DEV_DB_DIR) stop
-dev-db-clean:
+
+dev-db-create-database: 
+	-createdb $(DEV_DB_NAME)
+dev-db-drop-database: 
+	-dropdb $(DEV_DB_NAME)
+dev-db-clean-database: dev-db-start dev-db-drop-database dev-db-create-database
+
+dev-db-destroy:
 	-rm -r $(DEV_DB_DIR)
 
 dev-db-restart: dev-db-stop dev-db-start
@@ -51,9 +58,9 @@ dev-db-stop:
 	-pg_ctl -D $(DEV_DB_DIR) stop
 
 dev-db-start-bg:
-	pg_ctl -D $(DEV_DB_DIR) -l $(DEV_DB_DIR)/postgres.log start
+	-pg_ctl -D $(DEV_DB_DIR) -l $(DEV_DB_DIR)/postgres.log start
 dev-db-start-fg:
-	postgres -D $(DEV_DB_DIR) -p $(DEV_DB_PORT) -h $(DEV_DB_HOST)
+	-postgres -D $(DEV_DB_DIR) -p $(DEV_DB_PORT) -h $(DEV_DB_HOST)
 
 # TEST - DATABASE
 ### Note: Let's use the same DEV database with a different DB name
@@ -67,7 +74,14 @@ dev-db-test-setup: install-postgres dev-db-test-stop
 	-pg_ctl -D $(DEV_DB_TEST_DIR) -l $(DEV_DB_TEST_DIR)/postgres.log start
 	-createdb $(DEV_DB_TEST_NAME)
 	-pg_ctl -D $(DEV_DB_TEST_DIR) stop
-dev-db-test-clean:
+
+dev-db-test-create-database: 
+	-createdb $(DEV_DB_NAME)
+dev-db-test-drop-database: 
+	-dropdb $(DEV_DB_NAME)
+dev-db-test-clean-database: dev-db-test-start dev-db-test-drop-database dev-db-test-create-database
+
+dev-db-test-destroy:
 	-rm -r $(DEV_DB_TEST_DIR)
 
 dev-db-test-restart: dev-db-test-start dev-db-test-stop

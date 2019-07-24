@@ -16,19 +16,19 @@ import (
 * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 type User struct {
-	orm.BaseModel `gorm:"embedded"`
-	Name          string
-	Email         string
+	orm.BaseModel
+	Name  string `json:"name"`
+	Email string `json:"email"`
 }
 
 type UserSecure struct {
-	User               `gorm:"embedded"`
-	pwd.SecurePassword `gorm:"embedded"`
+	User
+	pwd.SecurePassword
 }
 
 func init() {
 	// 1. Setup User ORM Model
-	orm.AutoMigrate(&UserSecure{})
+	orm.RegisterModel(&UserSecure{})
 }
 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *

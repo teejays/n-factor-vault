@@ -9,6 +9,8 @@ import (
 	"github.com/teejays/n-factor-vault/backend/src/auth"
 	"github.com/teejays/n-factor-vault/backend/src/orm"
 	"github.com/teejays/n-factor-vault/backend/src/server/handler"
+	"github.com/teejays/n-factor-vault/backend/src/user"
+	"github.com/teejays/n-factor-vault/backend/src/vault"
 )
 
 func init() {
@@ -18,8 +20,9 @@ func init() {
 func TestHandleCreateVault(t *testing.T) {
 
 	// Make sure that we empty any table that these tests might populate once the test is over
-	var relevantOrmTables = []string{"UserSecure", "Vault", "VaultUser"}
-	defer orm.EmptyTestTables(t, relevantOrmTables)
+	var relevantOrmTables = []interface{}{user.UserSecure{}, vault.Vault{}, vault.VaultUser{}}
+	orm.EmptyTestTables(t, relevantOrmTables...)
+	defer orm.EmptyTestTables(t, relevantOrmTables...)
 
 	// Setup Test
 	// 1. Create some users
@@ -37,7 +40,7 @@ func TestHandleCreateVault(t *testing.T) {
 		AuthBearerTokenFunc:   getAuthTokenFunc,
 		AuthMiddlewareHandler: auth.AuthenticateRequestMiddleware,
 		BeforeTestFunc:        nil,
-		AfterTestFunc:         func(t *testing.T) { orm.EmptyTestTables(t, []string{"Vault", "VaultUser"}) },
+		AfterTestFunc:         func(t *testing.T) { orm.EmptyTestTables(t, vault.Vault{}, vault.VaultUser{}) },
 		// ^AfterTestFunc: we should empty the vault table after each test to start the next run on a fresh slate
 	}
 
@@ -52,19 +55,28 @@ func TestHandleCreateVault(t *testing.T) {
 			WantContent:    "",
 			WantErrMessage: "",
 			AssertContentFields: map[string]apitest.AssertFunc{
-				"id":          apitest.AssertNotEmptyFunc,
-				"name":        apitest.AssertIsEqual("Facebook"),
-				"description": apitest.AssertIsEqual("Shared account for our org"),
-				"created_at":  apitest.AssertNotEmptyFunc,
-				"updated_at":  apitest.AssertNotEmptyFunc,
-				"users":       apitest.AssertNotEmptyFunc,
+				"id":            apitest.AssertNotEmptyFunc,
+				"name":          apitest.AssertIsEqual("Facebook"),
+				"description":   apitest.AssertIsEqual("Shared account for our org"),
+				"admin_user_id": apitest.AssertNotEmptyFunc,
+				"created_at":    apitest.AssertNotEmptyFunc,
+				"updated_at":    apitest.AssertNotEmptyFunc,
+				"vault_users":   apitest.AssertNotEmptyFunc,
 			},
-			SkipAfterTestFunc: true,
+			// SkipAfterTestFunc: true,
 		},
 		{
 			// In the last test above, we set teh flag to skip AfterRunFunc, which means that the DB will not cleared
-			Name:           "status BadRequest if a vault with same name already exists",
-			Content:        `{"name":"Facebook", "description":"a different desc than before"}`,
+			Name:    "status BadRequest if a vault with same name already exists",
+			Content: `{"name":"Facebook", "description":"a different desc than before"}`,
+			BeforeRunFunc: func(t *testing.T) {
+				clog.Debugf("Running before run func - Start")
+				err := helperCreateVaults(token, "Facebook")
+				if err != nil {
+					t.Fatal(err)
+				}
+				clog.Debugf("Running before run func - End")
+			},
 			WantStatusCode: http.StatusBadRequest,
 			WantErrMessage: "duplicate key value violates unique constraint",
 		},
@@ -75,10 +87,10 @@ func TestHandleCreateVault(t *testing.T) {
 			WantStatusCode: http.StatusUnauthorized,
 		},
 		{
-			Name:                 "status Unauthorized if request has a bad auth token",
-			Content:              `{"name":"Facebook", "description":"Shared account for our org"}`,
-			AuthBeaererTokenFunc: func(t *testing.T) string { return "jkkjhkjasdkjh.oijowqieoij.12lkjadlkj" }, // Bad Token
-			WantStatusCode:       http.StatusUnauthorized,
+			Name:                "status Unauthorized if request has a bad auth token",
+			Content:             `{"name":"Facebook", "description":"Shared account for our org"}`,
+			AuthBearerTokenFunc: func(t *testing.T) string { return "jkkjhkjasdkjh.oijowqieoij.12lkjadlkj" }, // Bad Token
+			WantStatusCode:      http.StatusUnauthorized,
 		},
 		{
 			Name:           "status BadRequest if request with empty content",
@@ -120,16 +132,16 @@ func TestHandleCreateVault(t *testing.T) {
 func TestHandleGetVaults(t *testing.T) {
 
 	// Make sure that we empty any table that these tests might populate once the test is over
-	var relevantOrmTables = []string{"UserSecure", "Vault", "VaultUser"}
-	orm.EmptyTestTables(t, relevantOrmTables)
-	defer orm.EmptyTestTables(t, relevantOrmTables)
+	var relevantOrmTables = []interface{}{user.UserSecure{}, vault.Vault{}, vault.VaultUser{}}
+	orm.EmptyTestTables(t, relevantOrmTables...)
+	defer orm.EmptyTestTables(t, relevantOrmTables...)
 
 	// Setup Test
 	// 1. Create some users
 	helperCreateTestUsersT(t)
 	// 2. Login a test user and get the JWT token
 	token1, token2 := helperLoginTestUsersT(t)
-	// 3. Create tests vaulst for user
+	// 3. Create tests vaults for user
 	helperCreateTestVaultsT(t, token1)
 
 	// 4. Create a func that returns the token, so we can use that function as a param to the TestSuite
@@ -154,10 +166,10 @@ func TestHandleGetVaults(t *testing.T) {
 			WantStatusCode: http.StatusUnauthorized,
 		},
 		{
-			Name:                 "status Unauthorized if request has a bad auth token",
-			Content:              `{"name":"Facebook", "description":"Shared account for our org"}`,
-			AuthBeaererTokenFunc: func(t *testing.T) string { return "jkkjhkjasdkjh.oijowqieoij.12lkjadlkj" }, // Bad Token
-			WantStatusCode:       http.StatusUnauthorized,
+			Name:                "status Unauthorized if request has a bad auth token",
+			Content:             `{"name":"Facebook", "description":"Shared account for our org"}`,
+			AuthBearerTokenFunc: func(t *testing.T) string { return "jkkjhkjasdkjh.oijowqieoij.12lkjadlkj" }, // Bad Token
+			WantStatusCode:      http.StatusUnauthorized,
 		},
 		{
 			Name:               "status OK if user has vaults",
@@ -165,10 +177,10 @@ func TestHandleGetVaults(t *testing.T) {
 			AssertContentFuncs: []apitest.AssertFunc{apitest.AssertIsSlice, apitest.AssertSliceOfLen(2)},
 		},
 		{
-			Name:                 "status Ok but empty response if user has no vaults",
-			WantStatusCode:       http.StatusOK,
-			AuthBeaererTokenFunc: func(t *testing.T) string { return token2 }, // this is a token for user with no vaults
-			AssertContentFuncs:   []apitest.AssertFunc{apitest.AssertIsSlice, apitest.AssertSliceOfLen(0)},
+			Name:                "status Ok but empty response if user has no vaults",
+			WantStatusCode:      http.StatusOK,
+			AuthBearerTokenFunc: func(t *testing.T) string { return token2 }, // this is a token for user with no vaults
+			AssertContentFuncs:  []apitest.AssertFunc{apitest.AssertIsSlice, apitest.AssertSliceOfLen(0)},
 		},
 	}
 

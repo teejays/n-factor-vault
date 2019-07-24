@@ -4,11 +4,12 @@ import (
 	"fmt"
 
 	"github.com/teejays/clog"
+	"github.com/teejays/n-factor-vault/backend/library/id"
 )
 
 var ErrNoRowsFound = fmt.Errorf("no rows found for the query")
 
-func GetByID(id ID, v interface{}) (bool, error) {
+func GetByID(id id.ID, v interface{}) (bool, error) {
 	has, err := gEngine.Table(v).Where("id = ?", id).Get(v)
 	if err != nil {
 		return false, errWithContext(err)

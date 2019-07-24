@@ -20,34 +20,34 @@ var gServiceName = "Vault Service"
 * O R M   M O D E L S
 * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-// Vault definers the properties and fields of a vault enity
+// Vault definers the properties and fields of a vault entity
 // TODO: a vault should have hasMany relation with user.User
 // DECISION: do we want to explicitly have hasMany relations across tables?
 type Vault struct {
 	orm.BaseModel `gorm:"embedded"`
-	Name          string
-	Description   string
-	UserID        id.ID
-	Users         []*user.User
+	Name          string      `gorm:"unique_index:idx_name_admin" json:"name"`
+	Description   string      `json:"description"`
+	AdminUserID   id.ID       `gorm:"unique_index:idx_name_admin" json:"admin_user_id"`
+	VaultUsers    []VaultUser `json:"vault_users"`
 }
 
-// vaultUser represents the mapping between vault and users that are a part of it. This is not exported
+// VaultUser represents the mapping between vault and users that are a part of it. This is not exported
 // since we want to add this data to the main Vault struct while returning a Vault type, and don't to expose
 // by itself.
-type vaultUser struct {
+type VaultUser struct {
 	orm.BaseModel `gorm:"embedded"`
-	VaultID       id.ID
-	UserID        id.ID
-	IsConfirmed   bool
+	VaultID       id.ID     `gorm:"unique_index:idx_vault_user" json:"vault_id"`
+	UserID        id.ID     `gorm:"unique_index:idx_vault_user" json:"user_id"`
+	User          user.User `json:"user"`
 }
 
 func init() {
-	err := orm.AutoMigrate(&Vault{})
+	err := orm.RegisterModel(&Vault{})
 	if err != nil {
 		clog.FatalErr(err)
 	}
 
-	err = orm.AutoMigrate(&vaultUser{})
+	err = orm.RegisterModel(&VaultUser{})
 	if err != nil {
 		clog.FatalErr(err)
 	}
@@ -59,7 +59,7 @@ func init() {
 
 // CreateVaultRequest are the parameters that are passed when creating a vault
 type CreateVaultRequest struct {
-	UserID      id.ID
+	AdminUserID id.ID
 	Name        string
 	Description string
 }
@@ -76,7 +76,7 @@ func CreateVault(ctx context.Context, req CreateVaultRequest) (*Vault, error) {
 	if strings.TrimSpace(req.Description) == "" {
 		return nil, fmt.Errorf("description is empty")
 	}
-	if req.UserID.IsEmpty() {
+	if req.AdminUserID.IsEmpty() {
 		return nil, fmt.Errorf("admin userID is empty")
 	}
 
@@ -84,38 +84,31 @@ func CreateVault(ctx context.Context, req CreateVaultRequest) (*Vault, error) {
 	v := Vault{
 		Name:        req.Name,
 		Description: req.Description,
-		UserID:      req.UserID,
+		AdminUserID: req.AdminUserID,
 	}
 
-	// v.Users field is ignored by ORM in any case, and we only need to populate it as part of the Vault instance in Go
-	// For now, since this is a new vault, we have only one user (the admin)
-	v.Users, err = user.GetUsers(v.UserID)
-	if err != nil {
-		return nil, err
+	// Set the vault-user for the user creating this vault. Since this user is the admin,
+	// we can assume that their relation to the vault is 'confirmed'
+	vu := VaultUser{
+		UserID: v.AdminUserID,
 	}
+
+	v.VaultUsers = []VaultUser{vu}
 
 	// In this case get and assign the ID now so we can use it the vault-user entities
 	// Assigning it explicitly means that the ORm library doesn't assign it itself during insert
-	v.ID = id.GetNewID()
+	// v.ID = id.GetNewID()
 
-	//TODO: Figure out associationo
+	//TODO: Figure out association
 	err = orm.InsertOne(&v)
 	if err != nil {
 		return nil, err
 	}
 
-	// Set the vault-user for the user creating this vault. Since this user is the admin,
-	// we can assume that their relation to the vault is 'confirmed'
-	vu := vaultUser{
-		VaultID:     v.ID,
-		UserID:      v.UserID,
-		IsConfirmed: true,
-	}
-
-	err = orm.InsertOne(&vu)
-	if err != nil {
-		return nil, err
-	}
+	// err = orm.InsertOne(&vu)
+	// if err != nil {
+	// 	return nil, err
+	// }
 
 	return &v, nil
 }
@@ -139,18 +132,18 @@ func GetVault(ctx context.Context, id id.ID) (*Vault, error) {
 		panic(fmt.Sprintf("vault fetched by id (%v) has a different id (%v)", id, v.ID))
 	}
 
-	// Populate v.Users: Get vaultUsers first and then get user objects for those userIDs
-	vaultUsers, err := GetVaultUsersByVaultID(ctx, id)
-	if err != nil {
-		return nil, err
-	}
-	for _, vu := range vaultUsers {
-		u, err := user.GetUser(vu.UserID)
-		if err != nil {
-			return nil, err
-		}
-		v.Users = append(v.Users, u)
-	}
+	// // Populate v.Users: Get VaultUsers first and then get user objects for those userIDs
+	// VaultUsers, err := GetVaultUsersByVaultID(ctx, id)
+	// if err != nil {
+	// 	return nil, err
+	// }
+	// for _, vu := range VaultUsers {
+	// 	u, err := user.GetUser(vu.UserID)
+	// 	if err != nil {
+	// 		return nil, err
+	// 	}
+	// 	v.Users = append(v.Users, u)
+	// }
 
 	return &v, nil
 }
@@ -160,14 +153,14 @@ func GetVaultsByUser(ctx context.Context, userID id.ID) ([]*Vault, error) {
 	clog.Debugf("%s: GetVaultsByUsers(): user %v", gServiceName, userID)
 
 	// Get all the vaultIDs associated with the user
-	vaultUsers, err := getVaultUsersByUserID(ctx, userID)
+	VaultUsers, err := getVaultUsersByUserID(ctx, userID)
 	if err != nil {
-		return nil, fmt.Errorf("could not get vaultUsers by userID: %v", err)
+		return nil, fmt.Errorf("could not get VaultUsers by userID: %v", err)
 	}
 
 	// Get all the associated vaults for those vaultIDs
 	var vaults = []*Vault{}
-	for _, vu := range vaultUsers {
+	for _, vu := range VaultUsers {
 		v, err := GetVault(ctx, vu.VaultID)
 		if err != nil {
 			return nil, err
@@ -205,17 +198,31 @@ func AddUserToVault(ctx context.Context, req AddUserToVaultRequest) (*Vault, err
 
 // AddUser adds a new user to the vault
 func (v *Vault) AddUser(ctx context.Context, userID id.ID) error {
-	// add a new vault user
-	vu, err := addVaultUser(ctx, v.ID, userID)
-	if err != nil {
-		return err
+	// TODO: Check if user doesn't exist currently
+
+	// Create a new VaultUser and add to Vault
+	var vu = VaultUser{
+		UserID:  userID,
+		VaultID: v.ID,
 	}
-	// if successfully added vaultUser to the database, append it to this vault users
-	u, err := user.GetUser(vu.UserID)
+	v.VaultUsers = append(v.VaultUsers, vu)
+
+	// // add a new vault user
+	// vu, err := addVaultUser(ctx, v.ID, userID)
+	// if err != nil {
+	// 	return err
+	// }
+	// // if successfully added VaultUser to the database, append it to this vault users
+	// u, err := user.GetUser(vu.UserID)
+	// if err != nil {
+	// 	return err
+	// }
+	// v.Users = append(v.Users, u)
+
+	err := orm.Save(v)
 	if err != nil {
-		return err
+		return fmt.Errorf("could not save: %v", err)
 	}
-	v.Users = append(v.Users, u)
 	return nil
 }
 
@@ -223,33 +230,32 @@ func (v *Vault) AddUser(ctx context.Context, userID id.ID) error {
 * H E L P E R S
 * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-func GetVaultUsersByVaultID(ctx context.Context, vaultID id.ID) ([]*vaultUser, error) {
+func GetVaultUsersByVaultID(ctx context.Context, vaultID id.ID) ([]*VaultUser, error) {
 	clog.Debugf("%s: GetVaultUsersByVaultID(): vaultID %v", gServiceName, vaultID)
 
-	var vaultUsers []*vaultUser
-	_, err := orm.FindByColumn("vault_id", vaultID, &vaultUsers)
+	var VaultUsers []*VaultUser
+	_, err := orm.FindByColumn("vault_id", vaultID, &VaultUsers)
 	if err != nil {
 		return nil, err
 	}
-	return vaultUsers, nil
+	return VaultUsers, nil
 }
 
-func getVaultUsersByUserID(ctx context.Context, userID id.ID) ([]*vaultUser, error) {
+func getVaultUsersByUserID(ctx context.Context, userID id.ID) ([]*VaultUser, error) {
 	clog.Debugf("%s: getVaultUsersByUserID(): userID %v", gServiceName, userID)
 
-	var vaultUsers []*vaultUser
+	var VaultUsers []*VaultUser
 	var whereConds = map[string]interface{}{
-		"user_id":      userID,
-		"is_confirmed": true,
+		"user_id": userID,
 	}
-	_, err := orm.Find(whereConds, &vaultUsers)
+	_, err := orm.Find(whereConds, &VaultUsers)
 	if err != nil {
 		return nil, err
 	}
-	return vaultUsers, nil
+	return VaultUsers, nil
 }
 
-func addVaultUser(ctx context.Context, vaultID, userID id.ID) (*vaultUser, error) {
+func addVaultUser(ctx context.Context, vaultID, userID id.ID) (*VaultUser, error) {
 	clog.Debugf("%s: addUserToVault(): vaultID <%v> | userID <%v>", gServiceName, userID)
 
 	if userID.IsEmpty() {
@@ -260,12 +266,11 @@ func addVaultUser(ctx context.Context, vaultID, userID id.ID) (*vaultUser, error
 		return nil, fmt.Errorf("vaultID is empty")
 	}
 
-	var vu = vaultUser{
+	var vu = VaultUser{
 		VaultID: vaultID,
 		UserID:  userID,
-		// TODO: We shouldn't be confirming users into a vault by default. In reality, they should be invited
-		// or should request to join, and once they accept or the request is approved, the should be confirmed.
-		IsConfirmed: true,
+		// TODO: There should be some concept of confirming users into a vault. One they are invited
+		// or request to join, and once they accept or the request is approved, the should be confirmed.
 	}
 
 	err := orm.InsertOne(&vu)

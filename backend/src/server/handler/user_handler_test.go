@@ -5,9 +5,11 @@ import (
 	"testing"
 
 	"github.com/teejays/clog"
+
 	"github.com/teejays/n-factor-vault/backend/library/go-api/apitest"
 	"github.com/teejays/n-factor-vault/backend/src/orm"
 	"github.com/teejays/n-factor-vault/backend/src/server/handler"
+	"github.com/teejays/n-factor-vault/backend/src/user"
 )
 
 func init() {
@@ -26,7 +28,7 @@ func init() {
 //  var relevantOrmTables = []string{"user_secure"}
 // 	defer orm.EmptyTestTables(t, relevantOrmTables)
 //
-// Exmample (Method 2):
+// Example (Method 2):
 //
 // if err := orm.StartTestSession(); err != nil {
 // 	t.Errorf("could not start orm session: %v", err)
@@ -38,16 +40,21 @@ func init() {
 // }()
 //
 
+func TestEmptyTable(t *testing.T) {
+	//var relevantModels = []interface{}{&user.UserSecure{}}
+	orm.EmptyTestTables(t, &user.UserSecure{})
+
+}
 func TestHandleSignup(t *testing.T) {
 
-	var relevantOrmObjs = []string{"UserSecure"}
-	defer orm.EmptyTestTables(t, relevantOrmObjs)
+	var relevantModels = []interface{}{user.UserSecure{}}
+	defer orm.EmptyTestTables(t, relevantModels...)
 
 	ts := apitest.TestSuite{
 		Route:         "/v1/signup",
 		Method:        http.MethodPost,
 		HandlerFunc:   handler.HandleSignup,
-		AfterTestFunc: func(t *testing.T) { orm.EmptyTestTables(t, relevantOrmObjs) },
+		AfterTestFunc: func(t *testing.T) { orm.EmptyTestTables(t, relevantModels...) },
 	}
 
 	tests := []apitest.HandlerTest{
@@ -123,8 +130,8 @@ func TestHandleSignup(t *testing.T) {
 func TestHandleLogin(t *testing.T) {
 
 	// Make sure that we empty any table that these tests might populate too
-	var relevantOrmObjs = []string{"UserSecure"}
-	defer orm.EmptyTestTables(t, relevantOrmObjs)
+	var relevantModels = []interface{}{user.UserSecure{}}
+	defer orm.EmptyTestTables(t, relevantModels...)
 
 	// Define the Test Suite
 	ts := apitest.TestSuite{
@@ -132,7 +139,7 @@ func TestHandleLogin(t *testing.T) {
 		Method:         http.MethodPost,
 		HandlerFunc:    handler.HandleLogin,
 		BeforeTestFunc: helperCreateTestUsersT,
-		AfterTestFunc:  func(t *testing.T) { orm.EmptyTestTables(t, relevantOrmObjs) },
+		AfterTestFunc:  func(t *testing.T) { orm.EmptyTestTables(t, relevantModels...) },
 	}
 
 	// Define the individual tests
