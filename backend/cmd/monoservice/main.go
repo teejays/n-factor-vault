@@ -8,6 +8,7 @@ import (
 
 	"github.com/teejays/n-factor-vault/backend/src/secret"
 	"github.com/teejays/n-factor-vault/backend/src/server"
+	"github.com/teejays/n-factor-vault/backend/src/totp"
 	"github.com/teejays/n-factor-vault/backend/src/user"
 	"github.com/teejays/n-factor-vault/backend/src/vault"
 )
@@ -48,6 +49,11 @@ func mainWithError() error {
 	}
 
 	err = secret.Init()
+	if err != nil {
+		return err
+	}
+
+	err = totp.Init()
 	if err != nil {
 		return err
 	}

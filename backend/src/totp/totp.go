@@ -6,8 +6,9 @@ import (
 	"crypto/cipher"
 	"crypto/hmac"
 	"crypto/rand"
+	"crypto/sha1"
 	"crypto/sha256"
-	"crypto/sha512"
+	"encoding/base32"
 	"encoding/binary"
 	"fmt"
 	"io"
@@ -17,6 +18,7 @@ import (
 	"github.com/pkg/errors"
 	"gopkg.in/go-playground/validator.v9"
 
+	"github.com/teejays/clog"
 	"github.com/teejays/n-factor-vault/backend/library/id"
 	"github.com/teejays/n-factor-vault/backend/library/orm"
 )
@@ -86,8 +88,8 @@ type Code struct {
 
 // CreateAccountRequest is the data required to create a new Account
 type CreateAccountRequest struct {
-	AccountName string `validate:"required"`
-	PrivateKey  []byte `validate:"required,min=1"`
+	Name       string `validate:"required"`
+	PrivateKey []byte `validate:"required,min=1"`
 }
 
 // CreateAccount creates a TOTP instance
@@ -100,7 +102,7 @@ func CreateAccount(req CreateAccountRequest) (Account, error) {
 		return a, err
 	}
 
-	a.Name = req.AccountName
+	a.Name = req.Name
 
 	// Encrypt the private key
 	// TODO: Make the encryption safer, but for POC this is fine
@@ -108,7 +110,7 @@ func CreateAccount(req CreateAccountRequest) (Account, error) {
 	// using a combination of a stored common key + service name + salt
 
 	// Populate the TOTP instance
-	key := getEncryptionKey(req.AccountName)
+	key := getEncryptionKey(req.Name)
 	encryptedPrivateKey, err := encryptWithKey(key, req.PrivateKey)
 	if err != nil {
 		return a, err
@@ -177,9 +179,9 @@ func GetCode(req GetCodeRequest) (Code, error) {
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 * H E L P E R S
 * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-func getEncryptionKey(AccountName string) []byte {
+func getEncryptionKey(accountName string) []byte {
 	h := sha256.New()
-	h.Write([]byte(AccountName))
+	h.Write([]byte(accountName))
 	return h.Sum(nil)
 }
 
@@ -267,21 +269,28 @@ func getTOTPValue(privateKey []byte, startUnixTime int64, endUnixTime int64, int
 		return "", errors.New("could not calculate counter time as interval is less than 1 second")
 	}
 
-	counterTime := (endUnixTime - startUnixTime) / intervalSeconds
-	// we will use counterTime as the 'message' in our hash function, however counterTime is an int
+	counter := int64(math.Floor(float64(endUnixTime-startUnixTime) / float64(intervalSeconds)))
+	// we will use counter as the 'message' in our hash function, however counter is an int
 	// so we need to make it into []byte. We can use an ASCII representation of the int - but that
 	// wouldn't work as the 'authenticating' service will probably use the  binary representation of
 	// the number itself to genrate the code, and we need to match those codes
-	buf := new(bytes.Buffer)
-	err := binary.Write(buf, binary.LittleEndian, counterTime)
+	buf := make([]byte, 8)
+	binary.BigEndian.PutUint64(buf, uint64(counter))
+
+	// Private Key should be of UPPER CASE
+	privateKey = bytes.ToUpper(privateKey)
+
+	secretBytes, err := base32.StdEncoding.DecodeString(string(privateKey))
 	if err != nil {
 		return "", err
 	}
-	counterTimeInBytes := buf.Bytes()
 
 	// Get the HMAC
-	mac := hmac.New(sha512.New, privateKey)
-	mac.Write(counterTimeInBytes)
+	clog.Debugf("%s: getting code using private key: '%s'", "totp", privateKey)
+	clog.Debugf("%s: getting code using secret: '%s'", "totp", secretBytes)
+	mac := hmac.New(sha1.New, secretBytes)
+	clog.Debugf("%s: getting code of counter: '%d'", "totp", counter)
+	mac.Write(buf)
 	messageMAC := mac.Sum(nil)
 
 	// HOTP is the truncated version of HMAC

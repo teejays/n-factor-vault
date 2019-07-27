@@ -97,6 +97,21 @@ func GetRoutes() []api.Route {
 			HandlerFunc:  handler.HandleGetSecret,
 			Authenticate: true,
 		},
+		// TOTP
+		{
+			Method:      http.MethodPost,
+			Version:     ver1,
+			Path:        "totp/account",
+			HandlerFunc: handler.HandleCreateTOTPAccount,
+			// Authenticate: true,
+		},
+		{
+			Method:      http.MethodGet,
+			Version:     ver1,
+			Path:        "totp/account/{totp_account_id}",
+			HandlerFunc: handler.HandleTOTPGetCode,
+			// Authenticate: true,
+		},
 	}
 
 	return routes
