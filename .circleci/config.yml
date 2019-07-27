@@ -23,5 +23,6 @@ jobs:
 
       # specify any bash command here prefixed with `run: `
       - run: cd /go/src/github.com/teejays/n-factor-vault/backend/cmd/monoservice
+      - run: pwd
       - run: make dev-init
       - run: make dev-go-tests
