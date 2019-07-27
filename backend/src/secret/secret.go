@@ -39,21 +39,24 @@ type SecretApproval struct {
 	Approved        bool  `xorm:"default null" json:"approved"`
 }
 
-func init() {
+// Init initializes the service so it can connect with the ORM
+func Init() error {
 	err := orm.RegisterModel(&Secret{})
 	if err != nil {
-		clog.FatalErr(err)
+		return err
 	}
 
 	err = orm.RegisterModel(&SecretRequest{})
 	if err != nil {
-		clog.FatalErr(err)
+		return err
 	}
 
 	err = orm.RegisterModel(&SecretApproval{})
 	if err != nil {
-		clog.FatalErr(err)
+		return err
 	}
+
+	return nil
 }
 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *

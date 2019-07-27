@@ -6,11 +6,52 @@ import (
 	"net/http"
 	"testing"
 
+	"github.com/teejays/clog"
 	"github.com/teejays/n-factor-vault/backend/library/go-api"
 	"github.com/teejays/n-factor-vault/backend/library/go-api/apitest"
 	"github.com/teejays/n-factor-vault/backend/src/auth"
+	"github.com/teejays/n-factor-vault/backend/src/orm"
 	"github.com/teejays/n-factor-vault/backend/src/server/handler"
+	"github.com/teejays/n-factor-vault/backend/src/user"
+	"github.com/teejays/n-factor-vault/backend/src/vault"
 )
+
+func init() {
+	err := initError()
+	if err != nil {
+		clog.FatalErr(err)
+	}
+}
+
+func initError() error {
+	var err error
+
+	// Initialize the ORM package
+	err = orm.Init()
+	if err != nil {
+		return err
+	}
+
+	// Initialize the services: the order should be important ideally, so dependent services are initialized later
+	err = user.Init()
+	if err != nil {
+		return err
+	}
+
+	err = vault.Init()
+	if err != nil {
+		return err
+	}
+
+	/* Uncomment when we tests for secrets service
+	err = secret.Init()
+	if err != nil {
+		return err
+	}
+	*/
+
+	return nil
+}
 
 func helperCreateTestUsersT(t *testing.T) {
 	err := helperCreateUsers("Jon", "Jane")

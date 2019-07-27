@@ -3,8 +3,10 @@ package orm
 import (
 	"fmt"
 
-	"github.com/jinzhu/gorm"
+	// github.com/jinzhu/gorm/dialects/postgres is needed to connect gorm to a Postgres database
 	_ "github.com/jinzhu/gorm/dialects/postgres"
+
+	"github.com/jinzhu/gorm"
 	"github.com/teejays/clog"
 
 	"github.com/teejays/n-factor-vault/backend/library/env"
@@ -16,21 +18,29 @@ import (
 
 var gDB *gorm.DB
 
-func init() {
+// Init initializes the ORM package by connecting to the database. Init needs to be run before the package can be
+// properly used. This expects you to have set the environment variables POSTGRES_PORT, POSTGRES_HOST and POSTGRES_DBNAME.
+func Init() error {
+	// Get the connection string that we can use to connect to the database server
 	connStr, err := getPostgresConnectionString()
 	if err != nil {
-		clog.Fatalf("Could not connect get postgres connection string: %v", err)
+		return fmt.Errorf("Could not connect get postgres connection string: %v", err)
 	}
 
 	db, err := gorm.Open("postgres", connStr)
 	if err != nil {
-		clog.Fatalf("Could not connect to database: %v", err)
+		return fmt.Errorf("Could not connect to database: %v", err)
 	}
+
+	// For DEV and TEST environments, log more ORM stuff
 	if env.GetEnv() == env.DEV || env.GetEnv() == env.TEST {
 		db.LogMode(true)
 	}
-	gDB = db
+
 	clog.Infof("orm: DB connection opened: %+v", gDB)
+
+	gDB = db
+	return nil
 }
 
 func getPostgresConnectionString() (string, error) {

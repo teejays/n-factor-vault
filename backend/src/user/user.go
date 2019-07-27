@@ -26,9 +26,10 @@ type UserSecure struct {
 	pwd.SecurePassword
 }
 
-func init() {
+// Init initializes the service so it can connect with the ORM
+func Init() error {
 	// 1. Setup User ORM Model
-	orm.RegisterModel(&UserSecure{})
+	return orm.RegisterModel(&UserSecure{})
 }
 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *

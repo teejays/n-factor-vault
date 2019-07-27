@@ -41,16 +41,19 @@ type VaultUser struct {
 	User          user.User `json:"user"`
 }
 
-func init() {
+// Init initializes the service so it can connect with the ORM
+func Init() error {
 	err := orm.RegisterModel(&Vault{})
 	if err != nil {
-		clog.FatalErr(err)
+		return err
 	}
 
 	err = orm.RegisterModel(&VaultUser{})
 	if err != nil {
-		clog.FatalErr(err)
+		return err
 	}
+
+	return nil
 }
 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
