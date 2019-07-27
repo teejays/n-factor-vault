@@ -219,7 +219,7 @@ func encryptWithKey(key []byte, data []byte) ([]byte, error) {
 
 }
 
-// encryptWithKey takes a key and data, and decrypts it
+// decryptWithKey takes a key and encrypted data, and decrypts it
 // https://tutorialedge.net/golang/go-encrypt-decrypt-aes-tutorial/
 func decryptWithKey(key []byte, encryptedData []byte) ([]byte, error) {
 

@@ -146,7 +146,7 @@ func AuthenticateRequestMiddleware(next http.Handler) http.Handler {
 			api.WriteError(w, http.StatusInternalServerError, fmt.Errorf(api.ErrMessageClean), false, nil)
 			return
 		}
-		// Authentication succesful
+		// Authentication successful
 		// Add the authentication payload to the context
 		ctx := r.Context()
 		ctx = context.WithValue(ctx, gCtxKeyIsAuthenticated, true)
