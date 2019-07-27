@@ -23,8 +23,20 @@ func StrToID(str string) (ID, error) {
 	return ID(str), nil
 }
 
+// StrToIDMust takes a string and converts it to type ID.
+// It panics if the string cannot be converted to type ID.
+func StrToIDMust(str string) ID {
+	return ID(str)
+}
+
 // IDToStr takes an ID and converts it to type string.
 // It returns an error if the ID cannot be converted to type string.
 func IDToStr(id ID) (string, error) {
 	return string(id), nil
+}
+
+// IDToStrMust takes an ID and converts it to type string.
+// It panics if the ID cannot be converted to type string.
+func IDToStrMust(id ID) string {
+	return string(id)
 }

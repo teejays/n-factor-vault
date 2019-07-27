@@ -65,11 +65,22 @@ func (sp SecurePassword) ValidatePassword(password string) bool {
 	return areEqual(sp.Hash, newHash)
 }
 
+// GetHash generates a hash of specified hashLength given the password, the salt and number of iterations to use
+// to produce the hash
+func GetHash(password string, salt []byte, numIterations int, hashLength int) []byte {
+	return getHash(password, salt, numIterations, hashLength)
+}
+
 // getHash generates a hash of specified hashLength given the password, the salt and number of iterations to use
 // to produce the hash
 func getHash(password string, salt []byte, numIterations int, hashLength int) []byte {
 	hash := pbkdf2.Key([]byte(password), salt, numIterations, hashLength, sha256.New)
 	return hash
+}
+
+// GetSalt generates a randomly generated salt of length size
+func GetSalt(size int) ([]byte, error) {
+	return getSalt(size)
 }
 
 // getSalt generates a randomly generated salt of length size

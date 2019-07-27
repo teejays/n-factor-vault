@@ -1,6 +1,7 @@
 {
     "typescript.implementationsCodeLens.enabled": true,
     "cSpell.words": [
+        "TOTP",
         "jinzhu"
     ]
 }

@@ -17,7 +17,7 @@ type BaseModel struct {
 }
 
 func (m *BaseModel) BeforeCreate(scope *gorm.Scope) error {
-	if m.ID == "" {
+	if m != nil && m.ID == "" {
 		scope.SetColumn("ID", id.GetNewID())
 	}
 	return nil
