@@ -1,3 +1,6 @@
 {
-    "typescript.implementationsCodeLens.enabled": true
+    "typescript.implementationsCodeLens.enabled": true,
+    "cSpell.words": [
+        "jinzhu"
+    ]
 }

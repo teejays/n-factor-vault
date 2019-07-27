@@ -5,8 +5,10 @@ import (
 	"fmt"
 
 	"github.com/teejays/clog"
+
 	"github.com/teejays/n-factor-vault/backend/library/id"
-	"github.com/teejays/n-factor-vault/backend/src/orm"
+	"github.com/teejays/n-factor-vault/backend/library/orm"
+
 	"github.com/teejays/n-factor-vault/backend/src/vault"
 )
 

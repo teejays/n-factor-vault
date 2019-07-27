@@ -7,10 +7,12 @@ import (
 	"testing"
 
 	"github.com/teejays/clog"
+
 	"github.com/teejays/n-factor-vault/backend/library/go-api"
 	"github.com/teejays/n-factor-vault/backend/library/go-api/apitest"
+	"github.com/teejays/n-factor-vault/backend/library/orm"
+
 	"github.com/teejays/n-factor-vault/backend/src/auth"
-	"github.com/teejays/n-factor-vault/backend/src/orm"
 	"github.com/teejays/n-factor-vault/backend/src/server/handler"
 	"github.com/teejays/n-factor-vault/backend/src/user"
 	"github.com/teejays/n-factor-vault/backend/src/vault"

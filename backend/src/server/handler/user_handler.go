@@ -6,7 +6,9 @@ import (
 	"net/http"
 
 	"github.com/teejays/clog"
+
 	"github.com/teejays/n-factor-vault/backend/library/go-api"
+
 	"github.com/teejays/n-factor-vault/backend/src/auth"
 	"github.com/teejays/n-factor-vault/backend/src/user"
 )

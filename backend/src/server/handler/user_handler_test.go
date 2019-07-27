@@ -7,7 +7,8 @@ import (
 	"github.com/teejays/clog"
 
 	"github.com/teejays/n-factor-vault/backend/library/go-api/apitest"
-	"github.com/teejays/n-factor-vault/backend/src/orm"
+	"github.com/teejays/n-factor-vault/backend/library/orm"
+
 	"github.com/teejays/n-factor-vault/backend/src/server/handler"
 	"github.com/teejays/n-factor-vault/backend/src/user"
 )

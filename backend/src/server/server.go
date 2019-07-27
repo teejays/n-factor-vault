@@ -2,6 +2,7 @@ package server
 
 import (
 	api "github.com/teejays/n-factor-vault/backend/library/go-api"
+
 	"github.com/teejays/n-factor-vault/backend/src/auth"
 )
 

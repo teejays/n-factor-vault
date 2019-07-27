@@ -4,7 +4,8 @@ import (
 	"github.com/teejays/clog"
 
 	"github.com/teejays/n-factor-vault/backend/library/env"
-	"github.com/teejays/n-factor-vault/backend/src/orm"
+	"github.com/teejays/n-factor-vault/backend/library/orm"
+
 	"github.com/teejays/n-factor-vault/backend/src/secret"
 	"github.com/teejays/n-factor-vault/backend/src/server"
 	"github.com/teejays/n-factor-vault/backend/src/user"

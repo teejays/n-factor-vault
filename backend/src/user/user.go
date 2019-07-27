@@ -6,9 +6,10 @@ import (
 	"strings"
 
 	"github.com/teejays/clog"
+
 	pwd "github.com/teejays/n-factor-vault/backend/library/go-pwd"
 	"github.com/teejays/n-factor-vault/backend/library/id"
-	"github.com/teejays/n-factor-vault/backend/src/orm"
+	"github.com/teejays/n-factor-vault/backend/library/orm"
 )
 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
