@@ -1,0 +1,19 @@
+version: "3"
+services:
+  monodb:
+    image: "postgres:11"
+    container_name: "monodb"
+    ports:
+      - "54320:5432"
+    volumes:
+      - dbdata:/var/lib/postgresql/data
+  monoservice:
+    build:
+      context: .
+      dockerfile: cmd/monoservice/Dockerfile
+    ports:
+      - "8080:8080"
+    depends_on:
+      - monodb
+volumes:
+  dbdata:

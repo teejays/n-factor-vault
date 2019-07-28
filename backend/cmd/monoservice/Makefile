@@ -4,6 +4,18 @@ PROJECT_NAME=monoservice
 PATH_BACKEND=../..
 PATH_BACKEND_SRC=$(PATH_BACKEND)/src
 
+# DOCKER
+docker-build:
+	docker build -t $(PROJECT_NAME) -f ./Dockerfile $(PATH_BACKEND)
+docker-run:
+	docker run -p 8080:8080 --name=$(PROJECT_NAME) $(PROJECT_NAME)
+docker-start:
+	docker start -a $(PROJECT_NAME)
+docker-stop:
+	docker stop $(PROJECT_NAME)
+docker-rm:
+	docker rm $(PROJECT_NAME)
+
 ## PROJECT SETUP
 dev-init: dev-db-setup dev-db-test-setup
 ## PROJECT RUN
