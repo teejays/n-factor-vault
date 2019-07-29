@@ -3,18 +3,12 @@ package handler
 import (
 	"net/http"
 
-	"github.com/teejays/clog"
-
 	"github.com/teejays/n-factor-vault/backend/library/go-api"
 	"github.com/teejays/n-factor-vault/backend/library/id"
 
 	"github.com/teejays/n-factor-vault/backend/src/auth"
 	"github.com/teejays/n-factor-vault/backend/src/secret"
 )
-
-func init() {
-	clog.LogLevel = 8
-}
 
 // HandleRequestSecret handles request to reveal a secret
 func HandleRequestSecret(w http.ResponseWriter, r *http.Request) {

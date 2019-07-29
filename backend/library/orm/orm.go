@@ -51,9 +51,8 @@ func Init() error {
 		db.LogMode(true)
 	}
 
-	clog.Infof("orm: DB connection opened: %+v", gDB)
-
 	gDB = db
+	clog.Infof("orm: DB connection opened: %+v", gDB)
 	return nil
 }
 
@@ -77,16 +76,20 @@ func getPostgresConnectionString() (string, error) {
 	}
 
 	// Get the user and password
-	user, err := env.GetEnvVar("POSTGRES_USER")
-	if err != nil {
-		return "", err
-	}
-	password, err := env.GetEnvVar("POSTGRES_PWD")
-	if err != nil {
-		return "", err
-	}
+	user, _ := env.GetEnvVar("POSTGRES_USER")
+	password, _ := env.GetEnvVar("POSTGRES_PWD")
 
-	return fmt.Sprintf("user=%s password=%s host=%s port=%d dbname=%s sslmode=disable", user, password, host, port, dbName), nil
+	var str = "host=%s port=%d dbname=%s sslmode=disable"
+	var args = []interface{}{host, port, dbName}
+	if user != "" {
+		str += " user=%s"
+		args = append(args, user)
+	}
+	if password != "" {
+		str += " password=%s"
+		args = append(args, password)
+	}
+	return fmt.Sprintf(str, args...), nil
 }
 
 func RegisterModel(v interface{}) error {

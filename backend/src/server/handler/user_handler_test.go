@@ -4,18 +4,12 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/teejays/clog"
-
 	"github.com/teejays/n-factor-vault/backend/library/go-api/apitest"
 	"github.com/teejays/n-factor-vault/backend/library/orm"
 
 	"github.com/teejays/n-factor-vault/backend/src/server/handler"
 	"github.com/teejays/n-factor-vault/backend/src/user"
 )
-
-func init() {
-	clog.LogLevel = 8
-}
 
 // There are two ways to make sure that while we run tests, the data in the database is not actually
 // persisted, otherwise it can affect the remaining tests.

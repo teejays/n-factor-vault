@@ -41,32 +41,32 @@ func TestCreateAccount(t *testing.T) {
 		{
 			name: "error if empty account name",
 			req: CreateAccountRequest{
-				AccountName: "",
-				PrivateKey:  []byte("some secret key"),
+				Name:       "",
+				PrivateKey: []byte("some secret key"),
 			},
 			wantErr: true,
 		},
 		{
 			name: "error if empty private key",
 			req: CreateAccountRequest{
-				AccountName: "Facebook",
-				PrivateKey:  []byte(""),
+				Name:       "Facebook",
+				PrivateKey: []byte(""),
 			},
 			wantErr: true,
 		},
 		{
 			name: "error if nil private key",
 			req: CreateAccountRequest{
-				AccountName: "Facebook",
-				PrivateKey:  nil,
+				Name:       "Facebook",
+				PrivateKey: nil,
 			},
 			wantErr: true,
 		},
 		{
 			name: "success if good request",
 			req: CreateAccountRequest{
-				AccountName: "Facebook",
-				PrivateKey:  []byte("a secret key"),
+				Name:       "Facebook",
+				PrivateKey: []byte("ORUGKIDQOJUXMYLUMUQGWZLZ"), // base32 for "the private key"
 			},
 		},
 	}
@@ -80,7 +80,7 @@ func TestCreateAccount(t *testing.T) {
 				return
 			}
 			assert.NoError(t, err)
-			assert.Equal(t, tt.req.AccountName, got.Name)
+			assert.Equal(t, tt.req.Name, got.Name)
 			assert.Equal(t, int64(30), got.IntervalSeconds)
 			assert.Equal(t, int64(0), got.StartUnixTime)
 			assert.NotEqual(t, 0, len(got.EncryptedPrivateKey))
@@ -171,8 +171,8 @@ func TestGetCode(t *testing.T) {
 
 func createTestAccount(t *testing.T) Account {
 	req := CreateAccountRequest{
-		AccountName: "Facebook",
-		PrivateKey:  []byte("a secret key"),
+		Name:       "Facebook",
+		PrivateKey: []byte("ORUGKIDQOJUXMYLUMUQGWZLZ"), // base32 for "the private key"
 	}
 	a, err := CreateAccount(req)
 	if err != nil {

@@ -155,14 +155,14 @@ func GetCode(req GetCodeRequest) (Code, error) {
 	key := getEncryptionKey(a.Name)
 	privateKey, err := decryptWithKey(key, a.EncryptedPrivateKey)
 	if err != nil {
-		return c, err
+		return c, fmt.Errorf("decrypting with key: %v", err)
 	}
 
 	// generate a TOTP code
 	now := time.Now().Unix()
 	code, err := getTOTPValue(privateKey, a.StartUnixTime, now, a.IntervalSeconds)
 	if err != nil {
-		return c, err
+		return c, fmt.Errorf("generating TOTP code: %v", err)
 	}
 	// Get expiry timestamp
 	c.Code = code
@@ -280,13 +280,13 @@ func getTOTPValue(privateKey []byte, startUnixTime int64, endUnixTime int64, int
 	// Private Key should be of UPPER CASE
 	privateKey = bytes.ToUpper(privateKey)
 
+	clog.Debugf("%s: getting code using private key: '%s'", "totp", privateKey)
 	secretBytes, err := base32.StdEncoding.DecodeString(string(privateKey))
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("encoding private key to base64: %v", err)
 	}
 
 	// Get the HMAC
-	clog.Debugf("%s: getting code using private key: '%s'", "totp", privateKey)
 	clog.Debugf("%s: getting code using secret: '%s'", "totp", secretBytes)
 	mac := hmac.New(sha1.New, secretBytes)
 	clog.Debugf("%s: getting code of counter: '%d'", "totp", counter)
