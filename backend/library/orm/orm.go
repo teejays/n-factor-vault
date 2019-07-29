@@ -2,6 +2,7 @@ package orm
 
 import (
 	"fmt"
+	"time"
 
 	// github.com/jinzhu/gorm/dialects/postgres is needed to connect gorm to a Postgres database
 	_ "github.com/jinzhu/gorm/dialects/postgres"
@@ -27,9 +28,22 @@ func Init() error {
 		return fmt.Errorf("Could not connect get postgres connection string: %v", err)
 	}
 
-	db, err := gorm.Open("postgres", connStr)
-	if err != nil {
-		return fmt.Errorf("Could not connect to database: %v", err)
+	// If we can't connect to DB, we should probably try a few times with somewait
+	// Sometimes, the DB isn't up and ready yet
+	var db *gorm.DB
+	var retryAttempts = 5
+	for i := 0; i < retryAttempts; i++ {
+		db, err = gorm.Open("postgres", connStr)
+		if err != nil {
+			message := fmt.Sprintf("orm: Could not connect to database (attempt #%d out of %d): %v", i+1, retryAttempts, err)
+			if i == retryAttempts-1 {
+				return fmt.Errorf(message)
+			}
+			clog.Error(message)
+			time.Sleep(3 * time.Second)
+			continue
+		}
+		break
 	}
 
 	// For DEV and TEST environments, log more ORM stuff

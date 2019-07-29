@@ -35,6 +35,5 @@ ARG pg_user
 ARG pg_pwd
 ARG pg_dbname
 ENV POSTGRES_HOST=$pg_host POSTGRES_PORT=$pg_port POSTGRES_DBNAME=$pg_dbname POSTGRES_USER=$pg_user POSTGRES_PWD=$pg_pwd
-RUN echo $pg_port
 
 CMD /wait && ./monoservice.bin
