@@ -1,0 +1,4 @@
+# This dircetory contains the database files, so nothing should be committed.
+*
+!.gitignore
+!README.md
