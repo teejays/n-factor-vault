@@ -1,19 +1,34 @@
 version: "3"
 services:
-  monodb:
+  db:
     image: "postgres:11"
     container_name: "monodb"
     ports:
-      - "54320:5432"
+      - "5432"
+    environment:
+      - POSTGRES_USER=docker
+      - POSTGRES_PASSWORD=docker
+      - PGDATA=/dbdata
+      - POSTGRES_DB=nfactorvault
     volumes:
-      - dbdata:/var/lib/postgresql/data
+      - ./dbdata:/dbdata
   monoservice:
     build:
       context: .
       dockerfile: cmd/monoservice/Dockerfile
+      args:
+        app_env: DEV
+        pg_host: db
+        pg_port: 5432
+        pg_user: docker
+        pg_pwd: docker
+        pg_dbname: nfactorvault
+    environment:
+      WAIT_HOSTS: db:5432
     ports:
       - "8080:8080"
     depends_on:
-      - monodb
+      - db
+    tty: true
 volumes:
   dbdata:

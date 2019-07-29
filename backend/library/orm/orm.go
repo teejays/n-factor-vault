@@ -62,7 +62,17 @@ func getPostgresConnectionString() (string, error) {
 		return "", err
 	}
 
-	return fmt.Sprintf("host=%s port=%d dbname=%s sslmode=disable", host, port, dbName), nil
+	// Get the user and password
+	user, err := env.GetEnvVar("POSTGRES_USER")
+	if err != nil {
+		return "", err
+	}
+	password, err := env.GetEnvVar("POSTGRES_PWD")
+	if err != nil {
+		return "", err
+	}
+
+	return fmt.Sprintf("user=%s password=%s host=%s port=%d dbname=%s sslmode=disable", user, password, host, port, dbName), nil
 }
 
 func RegisterModel(v interface{}) error {
