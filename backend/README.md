@@ -14,10 +14,12 @@ This directory holds all of the backend code, and executable applications.
     
     Monoservice API and Postgres database server can be started using docker-compose. The configuration for docker compose is in the `docker-compose` file. Use the following command to start Monoservice.
         
-        make run
+        make docker-run
 
     You can also run Go tests using
 
-        make run-test
+        make docker-run-test
 
-    Both of these run using docker containers.
+    Both of these run using docker containers, and start the database docker container in the background which, if there are no errors, ends up running in the background. You can stop all the running containers using:
+
+        make docker-stop
