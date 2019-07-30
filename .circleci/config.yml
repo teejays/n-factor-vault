@@ -23,14 +23,10 @@ jobs:
 
       # specify any bash command here prefixed with `run: `
       - run: 
-          name: Setup - Monoservice
+          name: Setup
           command: |
-            cd /go/src/github.com/teejays/n-factor-vault/backend/cmd/monoservice
-            pwd
-            make dev-init
+            cd /go/src/github.com/teejays/n-factor-vault/backend
       - run:
-          name: Go Test - Monoservice
+          name: Go Test
           command: |
-            cd /go/src/github.com/teejays/n-factor-vault/backend/cmd/monoservice
-            pwd
-            make dev-go-test
+            make docker-run-test
