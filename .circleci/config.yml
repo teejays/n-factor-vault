@@ -29,7 +29,5 @@ jobs:
       - run:
           name: Go Test
           command: |
-            pwd
-            ls
-            docker ps
+            cd /go/src/github.com/teejays/n-factor-vault/backend
             make docker-run-test
