@@ -1,0 +1,62 @@
+version: "3"
+services:
+  
+# LOCAL DEVELOPMENT
+  db:
+    image: "postgres:11"
+    container_name: "monodb"
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=docker
+      - POSTGRES_PASSWORD=docker
+      - PGDATA=/data/postgres
+      - POSTGRES_DB=nfactorvault
+    volumes:
+      - ./db/data:/data
+
+  monoservice:
+    build:
+      context: .
+      dockerfile: cmd/monoservice/Dockerfile
+      args:
+        app_env: DEV
+        pg_host: db
+        pg_port: 5432
+        pg_user: docker
+        pg_pwd: docker
+        pg_dbname: nfactorvault
+    environment:
+      WAIT_HOSTS: db:5432
+    ports:
+      - "8080:8080"
+    depends_on:
+      - db
+    tty: true
+
+# TESTING
+  test_db:
+    image: "postgres:11"
+    container_name: "monodb-test"
+    environment:
+      - POSTGRES_USER=docker
+      - POSTGRES_PASSWORD=docker
+      - PGDATA=/postgres
+      - POSTGRES_DB=nfactorvault
+
+  go_test:
+    build:
+      context: .
+      dockerfile: cmd/monoservice/Dockerfile.test
+      args:
+        app_env: TEST
+        pg_host: test_db
+        pg_port: 5432
+        pg_user: docker
+        pg_pwd: docker
+        pg_dbname: nfactorvault
+    environment:
+      WAIT_HOSTS: test_db:5432
+    depends_on:
+      - test_db
+    tty: true

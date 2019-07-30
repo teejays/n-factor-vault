@@ -2,6 +2,7 @@ package orm
 
 import (
 	"fmt"
+	"time"
 
 	// github.com/jinzhu/gorm/dialects/postgres is needed to connect gorm to a Postgres database
 	_ "github.com/jinzhu/gorm/dialects/postgres"
@@ -27,9 +28,22 @@ func Init() error {
 		return fmt.Errorf("Could not connect get postgres connection string: %v", err)
 	}
 
-	db, err := gorm.Open("postgres", connStr)
-	if err != nil {
-		return fmt.Errorf("Could not connect to database: %v", err)
+	// If we can't connect to DB, we should probably try a few times with somewait
+	// Sometimes, the DB isn't up and ready yet
+	var db *gorm.DB
+	var retryAttempts = 5
+	for i := 0; i < retryAttempts; i++ {
+		db, err = gorm.Open("postgres", connStr)
+		if err != nil {
+			message := fmt.Sprintf("orm: Could not connect to database (attempt #%d out of %d): %v", i+1, retryAttempts, err)
+			if i == retryAttempts-1 {
+				return fmt.Errorf(message)
+			}
+			clog.Error(message)
+			time.Sleep(3 * time.Second)
+			continue
+		}
+		break
 	}
 
 	// For DEV and TEST environments, log more ORM stuff
@@ -37,9 +51,8 @@ func Init() error {
 		db.LogMode(true)
 	}
 
-	clog.Infof("orm: DB connection opened: %+v", gDB)
-
 	gDB = db
+	clog.Infof("orm: DB connection opened: %+v", gDB)
 	return nil
 }
 
@@ -62,7 +75,21 @@ func getPostgresConnectionString() (string, error) {
 		return "", err
 	}
 
-	return fmt.Sprintf("host=%s port=%d dbname=%s sslmode=disable", host, port, dbName), nil
+	// Get the user and password
+	user, _ := env.GetEnvVar("POSTGRES_USER")
+	password, _ := env.GetEnvVar("POSTGRES_PWD")
+
+	var str = "host=%s port=%d dbname=%s sslmode=disable"
+	var args = []interface{}{host, port, dbName}
+	if user != "" {
+		str += " user=%s"
+		args = append(args, user)
+	}
+	if password != "" {
+		str += " password=%s"
+		args = append(args, password)
+	}
+	return fmt.Sprintf(str, args...), nil
 }
 
 func RegisterModel(v interface{}) error {

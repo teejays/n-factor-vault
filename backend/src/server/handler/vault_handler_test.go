@@ -15,10 +15,6 @@ import (
 	"github.com/teejays/n-factor-vault/backend/src/vault"
 )
 
-func init() {
-	clog.LogLevel = 0
-}
-
 func TestHandleCreateVault(t *testing.T) {
 
 	// Make sure that we empty any table that these tests might populate once the test is over

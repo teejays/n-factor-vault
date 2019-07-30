@@ -19,6 +19,7 @@ import (
 )
 
 func init() {
+	clog.LogLevel = 0
 	err := initError()
 	if err != nil {
 		clog.FatalErr(err)
