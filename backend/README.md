@@ -20,6 +20,6 @@ This directory holds all of the backend code, and executable applications.
 
         make docker-run-test
 
-    Both of these run using docker containers, and start the database docker container in the background which, if there are no errors, ends up running in the background. You can stop all the running containers using:
+    Docker container for thE database runs in the background. In order to stop it (and other docker containers), you can use:
 
-        make docker-stop
+        make docker-stop-all

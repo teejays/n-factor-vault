@@ -1,6 +1,7 @@
 version: "3"
 services:
   
+# LOCAL DEVELOPMENT
   db:
     image: "postgres:11"
     container_name: "monodb"
@@ -13,8 +14,7 @@ services:
       - POSTGRES_DB=nfactorvault
     volumes:
       - ./db/data:/data
-      - ./db/init:/docker-entrypoint-initdb.d/
-  
+
   monoservice:
     build:
       context: .
@@ -34,23 +34,29 @@ services:
       - db
     tty: true
 
-  go-test:
+# TESTING
+  test_db:
+    image: "postgres:11"
+    container_name: "monodb-test"
+    environment:
+      - POSTGRES_USER=docker
+      - POSTGRES_PASSWORD=docker
+      - PGDATA=/postgres
+      - POSTGRES_DB=nfactorvault
+
+  go_test:
     build:
       context: .
       dockerfile: cmd/monoservice/Dockerfile.test
       args:
         app_env: TEST
-        pg_host: db
+        pg_host: test_db
         pg_port: 5432
         pg_user: docker
         pg_pwd: docker
-        pg_dbname: nfactorvault_test
+        pg_dbname: nfactorvault
     environment:
-      WAIT_HOSTS: db:5432
-    ports:
-      - "8081:8081"
+      WAIT_HOSTS: test_db:5432
     depends_on:
-      - db
+      - test_db
     tty: true
-volumes:
-  dbdata:
