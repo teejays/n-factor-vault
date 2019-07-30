@@ -31,4 +31,5 @@ jobs:
           command: |
             pwd
             ls
+            docker ps
             make docker-run-test
