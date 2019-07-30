@@ -29,4 +29,5 @@ jobs:
       - run:
           name: Go Test
           command: |
-            make docker-run-test
+            ls
+            make dev-go-test
