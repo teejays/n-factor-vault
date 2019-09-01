@@ -35,14 +35,9 @@ import (
 // }()
 //
 
-func TestEmptyTable(t *testing.T) {
-	//var relevantModels = []interface{}{&user.UserSecure{}}
-	orm.EmptyTestTables(t, &user.UserSecure{})
-
-}
 func TestHandleSignup(t *testing.T) {
 
-	var relevantModels = []interface{}{user.UserSecure{}}
+	var relevantModels = []interface{}{user.User{}, user.Password{}}
 	defer orm.EmptyTestTables(t, relevantModels...)
 
 	ts := apitest.TestSuite{
@@ -125,7 +120,7 @@ func TestHandleSignup(t *testing.T) {
 func TestHandleLogin(t *testing.T) {
 
 	// Make sure that we empty any table that these tests might populate too
-	var relevantModels = []interface{}{user.UserSecure{}}
+	var relevantModels = []interface{}{user.User{}, user.Password{}}
 	defer orm.EmptyTestTables(t, relevantModels...)
 
 	// Define the Test Suite

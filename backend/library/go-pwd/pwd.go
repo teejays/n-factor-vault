@@ -60,7 +60,7 @@ func (c Config) NewSecurePassword(password string) (SecurePassword, error) {
 }
 
 // ValidatePassword takes a password and validates that the password produces the same hash i.e. password is valid
-func (sp SecurePassword) ValidatePassword(password string) bool {
+func ValidatePassword(sp SecurePassword, password string) bool {
 	newHash := getHash(password, sp.Salt, sp.IterationCount, len(sp.Hash))
 	return areEqual(sp.Hash, newHash)
 }

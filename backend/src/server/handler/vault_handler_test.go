@@ -18,7 +18,7 @@ import (
 func TestHandleCreateVault(t *testing.T) {
 
 	// Make sure that we empty any table that these tests might populate once the test is over
-	var relevantOrmTables = []interface{}{user.UserSecure{}, vault.Vault{}, vault.VaultUser{}}
+	var relevantOrmTables = []interface{}{user.User{}, user.Password{}, vault.Vault{}, vault.VaultUser{}}
 	orm.EmptyTestTables(t, relevantOrmTables...)
 	defer orm.EmptyTestTables(t, relevantOrmTables...)
 
@@ -130,7 +130,7 @@ func TestHandleCreateVault(t *testing.T) {
 func TestHandleGetVaults(t *testing.T) {
 
 	// Make sure that we empty any table that these tests might populate once the test is over
-	var relevantOrmTables = []interface{}{user.UserSecure{}, vault.Vault{}, vault.VaultUser{}}
+	var relevantOrmTables = []interface{}{user.User{}, user.Password{}, vault.Vault{}, vault.VaultUser{}}
 	orm.EmptyTestTables(t, relevantOrmTables...)
 	defer orm.EmptyTestTables(t, relevantOrmTables...)
 

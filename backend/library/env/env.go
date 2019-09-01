@@ -35,6 +35,7 @@ func GetEnv() int {
 		return DEV
 	}
 	if v == "test" || v == "testing" {
+		clog.Info("TEST Env")
 		return TEST
 	}
 	return defaultEnv

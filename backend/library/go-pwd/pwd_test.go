@@ -43,7 +43,7 @@ func TestNewSecurePassword(t *testing.T) {
 	}
 }
 
-func TestSecurePassword_ValidatePassword(t *testing.T) {
+func TestValidatePassword(t *testing.T) {
 
 	type args struct {
 		password string
@@ -84,7 +84,7 @@ func TestSecurePassword_ValidatePassword(t *testing.T) {
 			sp, err := NewSecurePassword(tt.originalPassword)
 			assert.NoError(t, err)
 
-			if got := sp.ValidatePassword(tt.args.password); got != tt.want {
+			if got := ValidatePassword(sp, tt.args.password); got != tt.want {
 				t.Errorf("SecurePassword.ValidatePassword() = %v, want %v", got, tt.want)
 			}
 		})
