@@ -36,6 +36,50 @@ func init() {}
 	- use the secret key of the website to generate the
 	code and
 
+	TOTP
+
+	Anyone with access to the database should not be able to generate the TOTP code. TOTP Code is generated
+	using a SecretKey provided by the external website. However, we shouldn't store this SecretKey directly
+	in the database or anyone with access to database will be able to generate the TOTP code. We should therefore
+	encrypt it before storing i.e. store EncryptedSecretKey.
+		Setting up TOTP Vault process:
+			SecretKey + *EncryptionKey* --> EncryptedSecretKey (DB)
+
+	When a TOTP code is needed, we can decrypt EncryptedSecretKey into SecretKey and generate the token.
+			EncryptedSecretKey (DB) + *EncryptionKey* --> SecretKey --> TOTP Code
+
+	As you can see, this is a symmetric encryption. However, the process of decrypting should only be possible
+	when certain criteria is met i.e. n out of m users associated with a vault approve it. Otherwise, there should be no
+	way of decrypting the EncryptedSecretKey.
+
+	This mean, *EncryptionKey*, cannot be stored in the database, or in the code, otherwise anyone with access to code/db
+	can figure it out and hence get to the SecretKey and produce a TOTP Token. EncryptionKey needs to be generated on the
+	fly!
+
+	But how do we do this?
+	Approach 1:
+	Generate EncryptionKey by feeding a hash of the password of the team members, so we will need the team members
+	to enter their password before the EncryptionKey could be generated. But how do we then make sure that we allow
+	access a pre-determined subset of members have approved the access?
+
+	If a team has m members in total, and minimum n members need to approve for access, we should generate mCn (m choose n)
+	combinations of EncryptionKeys (based on passwords from all combinations of n-members), therefore store mCn EncryptedSecretKeys
+	in the database. For example: if a Discord vault has 6 members in total (A,B,C,D,E,F),
+	and we need at least 3 to approvals (1 requested + 2 more approvals), we will need to store EncryptedSecretKeys using encryption keys
+	from all of the following combinations ABC, ABD, ABE, ABF, BCD, BCE, BCF, CDE, CDF and DEF, where ABC represent an encryption key
+	genearted using some input (e.g. passwords) from user A, B and C.
+
+	When a vault is first created, we will only have 1 member (i.e. the creator, let's say A). We will take his/her password,
+	create a secure hash from it and use that hash to encrypt the SecretKey, as both n=m=1 in this case. But then user B is confirmed
+	as a member, and now m=2 and n=2. Now, we can remove/decrypt the EncryptedSecretKey using A's EncryptionKey (generate the encryption key
+	after asking A from an input prompt). Then, we will encrypt the SecretKey again using an EncryptionKey from both A and B
+	(they'll enter input/password again). Now, in order to descrypt EncryptedSecretKey, both A and B will have to participate.
+
+	Now, let's a third member is added, C but we still need to minimum of 2 approvals to grant access i.e. m=3, n=2.
+	What we can do is decrypt the old EncryptedSecretKey from when m was 2, and encrypt it using EncryptionKeys with inputs from
+	user AB, AC, BC. If anyone asks (let's say B) for access, we can send approval prompt to both  A and C, and if any one of them
+	approve (i.e. provide their input password), we can generate one of the
+	encryption keys (AB, or BC) and be able to decrypt the EncryptedSecretKey, and hence generate the TOTP code.
 
 */
 

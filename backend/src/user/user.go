@@ -22,15 +22,25 @@ type User struct {
 	Email string `json:"email"`
 }
 
-type UserSecure struct {
-	User
+type Password struct {
+	orm.BaseModel `gorm:"embedded"`
+	UserID        id.ID `gorm:"unique_index:idx_user" json:"user_id"`
 	pwd.SecurePassword
 }
 
 // Init initializes the service so it can connect with the ORM
-func Init() error {
+func Init() (err error) {
 	// 1. Setup User ORM Model
-	return orm.RegisterModel(&UserSecure{})
+	err = orm.RegisterModel(User{})
+	if err != nil {
+		return err
+	}
+	// 2. Password Table
+	err = orm.RegisterModel(Password{})
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
@@ -89,12 +99,13 @@ func CreateUser(req CreateUserRequest) (*User, error) {
 		return nil, err
 	}
 
-	var u UserSecure
+	var u User
 	u.Name = req.Name
 	u.Email = req.Email
 
 	// Get the password hash
-	u.SecurePassword, err = pwd.NewSecurePassword(req.Password)
+	var pass Password
+	pass.SecurePassword, err = pwd.NewSecurePassword(req.Password)
 	if err != nil {
 		return nil, err
 	}
@@ -106,38 +117,24 @@ func CreateUser(req CreateUserRequest) (*User, error) {
 	if err != nil {
 		return nil, err
 	}
-	if existingUser != nil {
+	if !existingUser.ID.IsEmpty() {
 		return nil, fmt.Errorf("an account with this email already exists")
 	}
 
-	// Save to DB
+	// Save to DB (the ID will auto-populated)
 	orm.InsertOne(&u)
 
-	return &u.User, nil
-}
+	pass.UserID = u.ID
+	orm.InsertOne(&pass)
 
-// GetUser provides the single user with the ID id
-func GetUser(id id.ID) (*User, error) {
-	var su UserSecure
-	exists, err := orm.FindByID(id, &su)
-	if err != nil {
-		return nil, err
-	}
-	if !exists {
-		clog.Warnf("user: no user found with id %v", id)
-		return nil, nil
-	}
-	if su.ID != id {
-		panic(fmt.Sprintf("user fetched by id (%v) has a different id (%v)", id, su.ID))
-	}
-	return &su.User, nil
+	return &u, nil
 }
 
 // GetUsers returns an slice of users given the userIDs passed
-func GetUsers(ids ...id.ID) ([]*User, error) {
-	var users []*User
+func GetUsers(ids ...id.ID) ([]User, error) {
+	var users []User
 	for _, id := range ids {
-		u, err := GetUser(id)
+		u, err := getUser(id)
 		if err != nil {
 			return nil, fmt.Errorf("userID %v: %v", id, err)
 		}
@@ -146,34 +143,64 @@ func GetUsers(ids ...id.ID) ([]*User, error) {
 	return users, nil
 }
 
-// GetSecureUserByEmail returns the full User object, including the password info (iteration count, hash, salt etc.)
-// This function is exported only because the auth service needs this info to validate the password when a user is logging in.
-// DISCUSS: Ideally, this info shouldn't travel between services - so should we do the password validation here? Or should we
-// actually store these secure credentials as part of the auth service/database?
-func GetSecureUserByEmail(email string) (*UserSecure, error) {
-	return getSecureUserByEmail(email)
+// GetUser provides the single user with the ID id
+func GetUser(id id.ID) (User, error) {
+	return getUser(id)
 }
 
-func getUserByEmail(email string) (*User, error) {
-	su, err := getSecureUserByEmail(email)
+func getUser(id id.ID) (User, error) {
+	var u User
+	exists, err := orm.FindByID(id, &u)
 	if err != nil {
-		return nil, err
+		return u, err
 	}
-	if su == nil {
-		return nil, nil
+	if !exists {
+		clog.Warnf("user: no user found with id %v", id)
+		return u, nil
 	}
-	return &su.User, nil
+	if u.ID != id {
+		panic(fmt.Sprintf("user fetched by id (%v) has a different id (%v)", id, u.ID))
+	}
+	return u, nil
 }
 
-func getSecureUserByEmail(email string) (*UserSecure, error) {
-	var su UserSecure
-	exists, err := orm.FindByColumn("email", email, &su)
+func GetUserByEmail(email string) (User, error) {
+	return getUserByEmail(email)
+}
+
+func getUserByEmail(email string) (User, error) {
+	var u User
+	exists, err := orm.FindByColumn("email", email, &u)
 	if err != nil {
-		return nil, err
+		return u, err
 	}
 	if !exists {
 		clog.Warnf("user: no user found with email %s", email)
-		return nil, nil
+		return u, nil
 	}
-	return &su, nil
+	return u, nil
+}
+
+// GetPasswordForUser returns the full User object, including the password info (iteration count, hash, salt etc.)
+// This function is exported only because the auth service needs this info to validate the password when a user is logging in.
+// DISCUSS: Ideally, this info shouldn't travel between services - so should we do the password validation here? Or should we
+// actually store these secure credentials as part of the auth service/database?
+func GetPasswordForUser(u User) (Password, error) {
+	return getPasswordForUser(u)
+}
+
+func getPasswordForUser(u User) (Password, error) {
+
+	var pass Password
+	exists, err := orm.FindByColumn("user_id", u.ID, &pass)
+	if err != nil {
+		return pass, err
+	}
+	if !exists {
+		// This means a user exists but no corresponding password hash, which should never happen
+		panic(fmt.Sprintf("no password entry for user %s found", u.ID))
+	}
+
+	return pass, nil
+
 }

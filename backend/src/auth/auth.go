@@ -11,6 +11,7 @@ import (
 	jwt "github.com/teejays/go-jwt"
 
 	"github.com/teejays/n-factor-vault/backend/library/go-api"
+	pwd "github.com/teejays/n-factor-vault/backend/library/go-pwd"
 	"github.com/teejays/n-factor-vault/backend/library/id"
 	"github.com/teejays/n-factor-vault/backend/src/user"
 )
@@ -67,23 +68,29 @@ func Login(creds LoginCredentials) (LoginResponse, error) {
 	}
 
 	// Get user by email
-	u, err := user.GetSecureUserByEmail(creds.Email)
+	u, err := user.GetUserByEmail(creds.Email)
 	if err != nil {
 		return resp, err
 	}
-	if u == nil {
+	if u.ID.IsEmpty() {
 		clog.Warnf("auth: no user found with email %s", creds.Email)
 		return resp, ErrInvalidCredentails
 	}
 
+	// Get User Password
+	pass, err := user.GetPasswordForUser(u)
+	if err != nil {
+		return resp, fmt.Errorf("fetching password hash: %v", err)
+	}
+
 	// Validate password
-	isValid := u.SecurePassword.ValidatePassword(creds.Password)
+	isValid := pwd.ValidatePassword(pass.SecurePassword, creds.Password)
 	if !isValid {
 		return resp, ErrInvalidCredentails
 	}
 
-	// Generate the token
-	token, err := generateToken(u.User)
+	// Generate the JWT Token
+	token, err := generateToken(u)
 	if err != nil {
 		return resp, err
 	}
@@ -231,7 +238,7 @@ func GetUserFromContext(ctx context.Context) (*user.User, error) {
 		return nil, err
 	}
 
-	return u, nil
+	return &u, nil
 
 }
 
