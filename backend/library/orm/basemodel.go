@@ -9,13 +9,18 @@ import (
 
 // BaseModel is the parent model that any struct intending to use ORM should embed.
 // This ensures that we have common meta fields across all entities and makes our code DRY.
+//
+// The reason we're not using the conventional gorm.Model is because that uses int as primary keys
+// while we want to use uuids.
 type BaseModel struct {
-	ID        id.ID      `gorm:"primary_key;type:uuid;" json:"id"`
-	CreatedAt time.Time  `gorm:"created notnull" json:"created_at"`
-	UpdatedAt time.Time  `gorm:"updated notnull" json:"updated_at"`
-	DeletedAt *time.Time `gorm:"deleted null" json:"deleted_at"`
+	ID         id.ID      `gorm:"PRIMARY_KEY;type:UUID;" json:"id"`
+	CreatedAt  time.Time  `gorm:"CREATED NOTNULL" json:"created_at"`
+	UpdatedAt  time.Time  `gorm:"UPDATED NOTNULL" json:"updated_at"`
+	DeletedAt  *time.Time `gorm:"DELETED NULL" json:"deleted_at"`
+	RowVersion int        `gorm:"AUTO_INCREMENT"`
 }
 
+// BeforeCreate is run whenever a new instance of a model is created.
 func (m *BaseModel) BeforeCreate(scope *gorm.Scope) error {
 	if m != nil && m.ID == "" {
 		scope.SetColumn("ID", id.GetNewID())

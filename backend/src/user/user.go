@@ -16,15 +16,17 @@ import (
 * O R M   M O D E L S
 * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
+// User is the basic user object
 type User struct {
 	orm.BaseModel
 	Name  string `json:"name"`
 	Email string `json:"email"`
 }
 
+// Password is separate struct for storing user hashed passwords
 type Password struct {
-	orm.BaseModel `gorm:"embedded"`
-	UserID        id.ID `gorm:"unique_index:idx_user" json:"user_id"`
+	orm.BaseModel
+	UserID id.ID `gorm:"unique_index:idx_user" json:"user_id"`
 	pwd.SecurePassword
 }
 

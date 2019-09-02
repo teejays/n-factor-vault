@@ -11,7 +11,6 @@ import (
 	"github.com/teejays/clog"
 
 	"github.com/teejays/n-factor-vault/backend/library/env"
-	"github.com/teejays/n-factor-vault/backend/library/id"
 )
 
 // TODO: type DB {*gorm.DB} would just allows us to add more wrapper functions
@@ -43,17 +42,32 @@ func Init() error {
 			time.Sleep(3 * time.Second)
 			continue
 		}
+
 		break
 	}
 
-	// For DEV and TEST environments, log more ORM stuff
-	if env.GetEnv() == env.DEV || env.GetEnv() == env.TEST {
+	// TODO: Inject clog as the default logger for gorm
+	// db.SetLogger(gorm.Logger{})
+
+	// By default, set log mode to false
+	db.LogMode(false)
+
+	// For DEV environment or if env var LOG_ORM is set to true/1, log more ORM stuff
+	if env.GetEnv() == env.DEV || env.GetBoolOrDefault("LOG_ORM", false) {
 		db.LogMode(true)
 	}
 
 	gDB = db
 	clog.Infof("orm: DB connection opened: %+v", gDB)
 	return nil
+}
+
+// Close closes the orm connection
+func Close() {
+	if gDB != nil {
+		return
+	}
+	gDB.Close()
 }
 
 func getPostgresConnectionString() (string, error) {
@@ -92,94 +106,29 @@ func getPostgresConnectionString() (string, error) {
 	return fmt.Sprintf(str, args...), nil
 }
 
+// RegisterModel registers the provided struct as a gorm model, creating the database table
+// in the process. All the magic stuff that goes along with creating a model should happen here.
+//
+// It does a few things:
+//
+// Create the main table for the struct
+// Handle the migration if the struct is being changed
+// TODO: Create a history table that keeps historic rows of the main table
+// Create a trigger that inserts data into the history table if a row is mutated in the main table
 func RegisterModel(v interface{}) error {
 	clog.Infof("orm: Registering model %T", v)
+
+	// Create/Migrate the main table
+	db := gDB.AutoMigrate(v)
+	if db.Error != nil {
+		return db.Error
+	}
+
+	// Create a history table
+
 	return gDB.AutoMigrate(v).Error
 }
 
-/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-* M U T A T E
-* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-
-func InsertOne(v interface{}) error {
-	return gDB.Create(v).Error
-}
-
-func Save(v interface{}) error {
-	return gDB.Save(v).Error
-}
-
-func UpdateByColumn(conditions map[string]interface{}, v interface{}) error {
-	db := gDB
-	for col, val := range conditions {
-		db = db.Where(fmt.Sprintf("%s = ?", col), val)
-	}
-	return db.Model(v).Updates(v).Error
-}
-
-/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-* Q U E R Y
-* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-
-func FindByID(id id.ID, v interface{}) (bool, error) {
-	err := gDB.Where("id = ?", id).First(v).Error
-	if err != nil {
-		if gorm.IsRecordNotFoundError(err) {
-			return false, nil
-		}
-		return false, err
-	}
-	return true, nil
-}
-
-func FindByColumn(colName string, colVal, v interface{}) (bool, error) {
-	err := gDB.Where(map[string]interface{}{colName: colVal}).Find(v).Error
-	if err != nil {
-		if gorm.IsRecordNotFoundError(err) {
-			return false, nil
-		}
-		return false, err
-	}
-	return true, nil
-}
-
-func FindOneByColumn(colName string, colVal, v interface{}) (bool, error) {
-	err := gDB.Where(map[string]interface{}{colName: colVal}).First(v).Error
-	if err != nil {
-		if gorm.IsRecordNotFoundError(err) {
-			return false, nil
-		}
-		return false, err
-	}
-	return true, nil
-}
-
-func FindOne(conditions map[string]interface{}, v interface{}) (bool, error) {
-	db := gDB
-	for col, val := range conditions {
-		db = db.Where(fmt.Sprintf("%s = ?", col), val)
-	}
-	err := db.First(v).Error
-	if err != nil {
-		if gorm.IsRecordNotFoundError(err) {
-			return false, nil
-		}
-		return false, err
-	}
-	return true, nil
-}
-
-func Find(conditions map[string]interface{}, v interface{}) (bool, error) {
-	db := gDB
-	for col, val := range conditions {
-		db = db.Where(fmt.Sprintf("%s = ?", col), val)
-	}
-	err := db.Find(v).Error
-	if err != nil {
-		if gorm.IsRecordNotFoundError(err) {
-			return false, nil
-		}
-		return false, err
-	}
-	return true, nil
-}
+// type ModelHistory struct {
+// 	ID
+// }

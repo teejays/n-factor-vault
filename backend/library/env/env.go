@@ -63,6 +63,20 @@ func GetEnvVarInt(k string) (int, error) {
 	return val, nil
 }
 
+// GetBoolOrDefault returns the true is an env variable is set to "true" or "1", false if set to "false" or "0"
+// or default if is not set
+func GetBoolOrDefault(k string, def bool) bool {
+	val := os.Getenv(k)
+	val = strings.TrimSpace(val)
+	if val == "true" || val == "1" {
+		return true
+	}
+	if val == "false" || val == "0" {
+		return false
+	}
+	return def
+}
+
 func SetEnvVars(vars map[string]string) error {
 	for k, v := range vars {
 		clog.Debugf("orm: Setting env var %s to %s", k, v)
