@@ -11,6 +11,7 @@ import (
 	"github.com/teejays/clog"
 
 	"github.com/teejays/n-factor-vault/backend/library/env"
+	"github.com/teejays/n-factor-vault/backend/library/orm/model"
 )
 
 // TODO: type DB {*gorm.DB} would just allows us to add more wrapper functions
@@ -115,20 +116,35 @@ func getPostgresConnectionString() (string, error) {
 // Handle the migration if the struct is being changed
 // TODO: Create a history table that keeps historic rows of the main table
 // Create a trigger that inserts data into the history table if a row is mutated in the main table
-func RegisterModel(v interface{}) error {
+func RegisterModel(v model.Entity) error {
 	clog.Infof("orm: Registering model %T", v)
 
-	// Create/Migrate the main table
-	db := gDB.AutoMigrate(v)
-	if db.Error != nil {
-		return db.Error
+	// Create a history table struct
+	tableName := gDB.NewScope(v).TableName()
+	if tableName == "" {
+		return fmt.Errorf("empty table name")
 	}
 
-	// Create a history table
+	var h = History{v}
 
-	return gDB.AutoMigrate(v).Error
+	// Create/Migrate the main table
+	if err := gDB.AutoMigrate(v).Error; err != nil {
+		return err
+	}
+
+	if err := gDB.AutoMigrate(h).Error; err != nil {
+		return err
+	}
+
+	return nil
 }
 
-// type ModelHistory struct {
-// 	ID
-// }
+// History is the data structure for keeping historic records of models
+type History struct {
+	model.Entity `gorm:"embedded"`
+}
+
+func (h History) TableName() string {
+	tableName := gDB.NewScope(h.Entity).TableName()
+	return fmt.Sprintf("%s_history", tableName)
+}

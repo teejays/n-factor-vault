@@ -3,6 +3,7 @@ module github.com/teejays/n-factor-vault/backend
 go 1.12
 
 require (
+	github.com/fatih/structtag v1.0.0 // indirect
 	github.com/go-playground/locales v0.12.1 // indirect
 	github.com/go-playground/universal-translator v0.16.0 // indirect
 	github.com/go-xorm/xorm v0.7.5
