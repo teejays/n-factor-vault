@@ -2,6 +2,7 @@ package orm
 
 import (
 	"fmt"
+	"reflect"
 	"time"
 
 	// github.com/jinzhu/gorm/dialects/postgres is needed to connect gorm to a Postgres database
@@ -124,11 +125,17 @@ func RegisterModel(v interface{}) error {
 		return db.Error
 	}
 
-	// Create a history table
+	// TODO: Create a history table
 
 	return gDB.AutoMigrate(v).Error
 }
 
-// type ModelHistory struct {
-// 	ID
-// }
+// RegisterModels register's multiple models in one go.
+func RegisterModels(models ...interface{}) error {
+	for _, v := range models {
+		if err := RegisterModel(v); err != nil {
+			return fmt.Errorf("registering %s", reflect.TypeOf(v))
+		}
+	}
+	return nil
+}
