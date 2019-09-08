@@ -26,7 +26,7 @@ func mainWithError() error {
 	var err error
 
 	// Set the log level
-	clog.LogLevel = 2
+	clog.LogLevel = 8
 	if env.GetEnv() == env.DEV {
 		clog.LogLevel = 0
 	}

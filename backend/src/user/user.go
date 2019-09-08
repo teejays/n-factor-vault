@@ -32,17 +32,7 @@ type Password struct {
 
 // Init initializes the service so it can connect with the ORM
 func Init() (err error) {
-	// 1. Setup User ORM Model
-	err = orm.RegisterModel(User{})
-	if err != nil {
-		return err
-	}
-	// 2. Password Table
-	err = orm.RegisterModel(Password{})
-	if err != nil {
-		return err
-	}
-	return nil
+	return orm.RegisterModels(&User{}, &Password{})
 }
 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *

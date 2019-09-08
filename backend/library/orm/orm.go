@@ -116,7 +116,7 @@ func getPostgresConnectionString() (string, error) {
 // Handle the migration if the struct is being changed
 // TODO: Create a history table that keeps historic rows of the main table
 // Create a trigger that inserts data into the history table if a row is mutated in the main table
-func RegisterModel(v interface{}) error {
+func RegisterModel(v Entity) error {
 	clog.Infof("orm: Registering model %T", v)
 
 	// Create/Migrate the main table
@@ -131,7 +131,7 @@ func RegisterModel(v interface{}) error {
 }
 
 // RegisterModels register's multiple models in one go.
-func RegisterModels(models ...interface{}) error {
+func RegisterModels(models ...Entity) error {
 	for _, v := range models {
 		if err := RegisterModel(v); err != nil {
 			return fmt.Errorf("registering %s", reflect.TypeOf(v))

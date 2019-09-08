@@ -8,15 +8,18 @@ import (
 * M U T A T E
 * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-func InsertOne(v interface{}) error {
+// InsertOne inserts an entity into the DB
+func InsertOne(v Entity) error {
 	return gDB.Create(v).Error
 }
 
-func Save(v interface{}) error {
+// Save save an entity into the DB
+func Save(v Entity) error {
 	return gDB.Save(v).Error
 }
 
-func UpdateByColumn(conditions map[string]interface{}, v interface{}) error {
+// UpdateByColumn updates all the entities where the condition matches with the new Entity v
+func UpdateByColumn(conditions map[string]interface{}, v Entity) error {
 	db := gDB
 	for col, val := range conditions {
 		db = db.Where(fmt.Sprintf("%s = ?", col), val)
@@ -24,6 +27,7 @@ func UpdateByColumn(conditions map[string]interface{}, v interface{}) error {
 	return db.Model(v).Updates(v).Error
 }
 
-func Delete(v interface{}) error {
+// Delete soft deletes the entity v from  the DB
+func Delete(v Entity) error {
 	return gDB.Delete(v).Error
 }

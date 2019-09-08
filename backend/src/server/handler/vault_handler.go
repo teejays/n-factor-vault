@@ -14,7 +14,7 @@ import (
 )
 
 func init() {
-	clog.LogLevel = 8
+
 }
 
 // HandleCreateVault creates a new vault for the authenticated user

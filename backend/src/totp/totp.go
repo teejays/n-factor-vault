@@ -97,7 +97,7 @@ var gDefaultCodeLength = 6
 func Init() error {
 	validate = validator.New()
 
-	err := orm.RegisterModel(&Account{})
+	err := orm.RegisterModels(&Account{})
 	if err != nil {
 		return err
 	}
@@ -107,7 +107,7 @@ func Init() error {
 
 // Account represents one TOTP setup for a particular website/service
 type Account struct {
-	orm.BaseModel       `gorm:"extended"`
+	orm.BaseModel       `gorm:"EMBEDDED"`
 	Name                string `gorm:"INDEX"`
 	EncryptedPrivateKey []byte `gorm:"NOT NULL"`
 	StartUnixTime       int64

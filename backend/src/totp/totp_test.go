@@ -23,7 +23,6 @@ func init() {
 		clog.FatalErr(err)
 	}
 
-	clog.LogLevel = 0
 }
 
 func TestCreateAccount(t *testing.T) {
