@@ -8,6 +8,7 @@ import (
 
 	"github.com/teejays/clog"
 
+	"github.com/teejays/n-factor-vault/backend/library/env"
 	"github.com/teejays/n-factor-vault/backend/library/go-api"
 	"github.com/teejays/n-factor-vault/backend/library/go-api/apitest"
 	"github.com/teejays/n-factor-vault/backend/library/orm"
@@ -27,6 +28,10 @@ func init() {
 
 func initError() error {
 	var err error
+
+	// Set the log level
+	clog.Infof("Application Environment: %s", env.GetAppEnv())
+	clog.LogLevel = 0
 
 	// Initialize the ORM package
 	err = orm.Init()

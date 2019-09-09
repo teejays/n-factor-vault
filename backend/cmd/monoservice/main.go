@@ -25,34 +25,42 @@ func main() {
 func mainWithError() error {
 	var err error
 
+	clog.Info("Starting the monoservice...")
+
 	// Set the log level
-	clog.LogLevel = 8
-	if env.GetEnv() == env.DEV {
+	clog.LogLevel = 2
+	clog.Infof("Application Environment: %s", env.GetAppEnv())
+	if env.GetAppEnv() == env.DEV {
 		clog.LogLevel = 0
 	}
 
 	// Initialize the ORM package
+	clog.Info("Initializing ORM...")
 	err = orm.Init()
 	if err != nil {
 		return err
 	}
 
 	// Initialize the services: the order should be important ideally, so dependent services are initialized later
+	clog.Info("Initializing User Service...")
 	err = user.Init()
 	if err != nil {
 		return err
 	}
 
+	clog.Info("Initializing Vault Service...")
 	err = vault.Init()
 	if err != nil {
 		return err
 	}
 
+	clog.Info("Initializing Secret Service...")
 	err = secret.Init()
 	if err != nil {
 		return err
 	}
 
+	clog.Info("Initializing TOTP Service...")
 	err = totp.Init()
 	if err != nil {
 		return err

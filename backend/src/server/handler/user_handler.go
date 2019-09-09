@@ -5,8 +5,6 @@ import (
 	"io/ioutil"
 	"net/http"
 
-	"github.com/teejays/clog"
-
 	"github.com/teejays/n-factor-vault/backend/library/go-api"
 
 	"github.com/teejays/n-factor-vault/backend/src/auth"
@@ -16,25 +14,10 @@ import (
 // HandleSignup handles the Signup API requests
 func HandleSignup(w http.ResponseWriter, r *http.Request) {
 
-	// Read the HTTP request body
-	body, err := ioutil.ReadAll(r.Body)
+	var req user.CreateUserRequest
+	err := api.UnmarshalJSONFromRequest(r, &req)
 	if err != nil {
 		api.WriteError(w, http.StatusBadRequest, err, false, nil)
-		return
-	}
-	defer r.Body.Close()
-
-	clog.Debugf("Content Body: %+v", string(body))
-	if len(body) < 1 {
-		api.WriteError(w, http.StatusBadRequest, api.ErrEmptyBody, false, nil)
-		return
-	}
-
-	// Unmarshal JSON into Go type
-	var req user.CreateUserRequest
-	err = json.Unmarshal(body, &req)
-	if err != nil {
-		api.WriteError(w, http.StatusBadRequest, err, true, api.ErrInvalidJSON)
 		return
 	}
 

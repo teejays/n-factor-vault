@@ -37,7 +37,7 @@ import (
 
 func TestHandleSignup(t *testing.T) {
 
-	var relevantModels = []interface{}{user.User{}, user.Password{}}
+	var relevantModels = []orm.Entity{&user.User{}, &user.Password{}}
 	defer orm.EmptyTestTables(t, relevantModels...)
 
 	ts := apitest.TestSuite{
@@ -70,21 +70,21 @@ func TestHandleSignup(t *testing.T) {
 			WantErrMessage: "empty fields (name, email, password) provided",
 		},
 		{
-			Name:           "status BadRequest if request if name is missing",
+			Name:           "status BadRequest if name is missing",
 			Content:        `{"email":"email@email.com", "password":"secret"}`,
 			WantStatusCode: http.StatusBadRequest,
 			WantContent:    "",
 			WantErrMessage: "empty fields (name) provided",
 		},
 		{
-			Name:           "status BadRequest if request if email is missing",
+			Name:           "status BadRequest if email is missing",
 			Content:        `{"name":"Jon Doe", "password":"secret"}`,
 			WantStatusCode: http.StatusBadRequest,
 			WantContent:    "",
 			WantErrMessage: "empty fields (email) provided",
 		},
 		{
-			Name:           "status BadRequest if request if password is missing",
+			Name:           "status BadRequest if password is missing",
 			Content:        `{"name":"Jon Doe", "email":"email@email.com"}`,
 			WantStatusCode: http.StatusBadRequest,
 			WantContent:    "",
@@ -120,7 +120,7 @@ func TestHandleSignup(t *testing.T) {
 func TestHandleLogin(t *testing.T) {
 
 	// Make sure that we empty any table that these tests might populate too
-	var relevantModels = []interface{}{user.User{}, user.Password{}}
+	var relevantModels = []orm.Entity{&user.User{}, &user.Password{}}
 	defer orm.EmptyTestTables(t, relevantModels...)
 
 	// Define the Test Suite

@@ -45,7 +45,7 @@ func initEngine(driverName string) error {
 	gEngine.SetColumnMapper(core.GonicMapper{})
 
 	// Only set these settings if DEV
-	if env.GetEnv() == env.DEV {
+	if env.GetAppEnv() == env.DEV {
 		clog.Warnf("orm: setting high log level")
 		gEngine.ShowSQL(true)
 		gEngine.Logger().SetLevel(core.LOG_DEBUG)

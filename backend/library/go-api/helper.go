@@ -1,7 +1,6 @@
 package api
 
 import (
-	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -11,6 +10,9 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/teejays/clog"
+
+	"github.com/teejays/n-factor-vault/backend/library/json"
+	"github.com/teejays/n-factor-vault/backend/library/validator"
 )
 
 // GetQueryParamInt extracts the param value with given name  out of the URL query
@@ -148,6 +150,11 @@ func UnmarshalJSONFromRequest(r *http.Request, v interface{}) error {
 		// api.WriteError(w, http.StatusBadRequest, err, true, api.ErrInvalidJSON)
 		clog.Errorf("api: Error unmarshaling JSON: %v", err)
 		return ErrInvalidJSON
+	}
+
+	err = validator.Validate(v)
+	if err != nil {
+		return err
 	}
 
 	return nil

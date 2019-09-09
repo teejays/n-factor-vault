@@ -27,8 +27,8 @@ func init() {
 
 func TestCreateAccount(t *testing.T) {
 	// Make sure that we empty any table that these tests might populate once the test is over
-	orm.EmptyTestTables(t, Account{})
-	defer orm.EmptyTestTables(t, Account{})
+	orm.EmptyTestTables(t, &Account{})
+	defer orm.EmptyTestTables(t, &Account{})
 
 	tests := []struct {
 		name    string
@@ -121,8 +121,8 @@ func TestEncryptDecrypt(t *testing.T) {
 
 func TestGetCode(t *testing.T) {
 
-	orm.EmptyTestTables(t, Account{})
-	defer orm.EmptyTestTables(t, Account{})
+	orm.EmptyTestTables(t, &Account{})
+	defer orm.EmptyTestTables(t, &Account{})
 	// Create a new TOTP account so we testgetting it's code
 	a := createTestAccount(t)
 

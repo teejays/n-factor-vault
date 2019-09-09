@@ -54,12 +54,12 @@ func Init() error {
 	db.LogMode(false)
 
 	// For DEV environment or if env var LOG_ORM is set to true/1, log more ORM stuff
-	if env.GetEnv() == env.DEV || env.GetBoolOrDefault("LOG_ORM", false) {
+	if env.GetAppEnv() == env.DEV || env.GetBoolOrDefault("LOG_ORM", false) {
 		db.LogMode(true)
 	}
 
 	gDB = db
-	clog.Infof("orm: DB connection opened: %+v", gDB)
+	clog.Infof("orm: DB connection opened")
 	return nil
 }
 

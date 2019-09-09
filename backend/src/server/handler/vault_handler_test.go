@@ -18,7 +18,7 @@ import (
 func TestHandleCreateVault(t *testing.T) {
 
 	// Make sure that we empty any table that these tests might populate once the test is over
-	var relevantOrmTables = []interface{}{user.User{}, user.Password{}, vault.Vault{}, vault.VaultUser{}}
+	var relevantOrmTables = []orm.Entity{&user.User{}, &user.Password{}, &vault.Vault{}, &vault.VaultUser{}}
 	orm.EmptyTestTables(t, relevantOrmTables...)
 	defer orm.EmptyTestTables(t, relevantOrmTables...)
 
@@ -38,7 +38,7 @@ func TestHandleCreateVault(t *testing.T) {
 		AuthBearerTokenFunc:   getAuthTokenFunc,
 		AuthMiddlewareHandler: auth.AuthenticateRequestMiddleware,
 		BeforeTestFunc:        nil,
-		AfterTestFunc:         func(t *testing.T) { orm.EmptyTestTables(t, vault.Vault{}, vault.VaultUser{}) },
+		AfterTestFunc:         func(t *testing.T) { orm.EmptyTestTables(t, &vault.Vault{}, &vault.VaultUser{}) },
 		// ^AfterTestFunc: we should empty the vault table after each test to start the next run on a fresh slate
 	}
 
@@ -130,7 +130,7 @@ func TestHandleCreateVault(t *testing.T) {
 func TestHandleGetVaults(t *testing.T) {
 
 	// Make sure that we empty any table that these tests might populate once the test is over
-	var relevantOrmTables = []interface{}{user.User{}, user.Password{}, vault.Vault{}, vault.VaultUser{}}
+	var relevantOrmTables = []orm.Entity{&user.User{}, &user.Password{}, &vault.Vault{}, &vault.VaultUser{}}
 	orm.EmptyTestTables(t, relevantOrmTables...)
 	defer orm.EmptyTestTables(t, relevantOrmTables...)
 

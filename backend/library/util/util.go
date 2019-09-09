@@ -14,7 +14,7 @@ func ValidateUniqueStrings(strs []string) []error {
 		cache[s] = true
 	}
 
-	for _, s := range notUnique {
+	for s := range notUnique {
 		errs = append(errs, fmt.Errorf("'%s' occurs more than once", s))
 	}
 

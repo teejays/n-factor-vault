@@ -1,10 +1,10 @@
 package orm
 
 import (
-	"fmt"
 	"time"
 
 	"github.com/jinzhu/gorm"
+	"github.com/teejays/clog"
 	"github.com/teejays/n-factor-vault/backend/library/id"
 )
 
@@ -14,15 +14,15 @@ import (
 // The reason we're not using the conventional gorm.Model is because that uses int as primary keys
 // while we want to use uuids.
 type BaseModelORM struct {
-	ID         id.ID      `gorm:"PRIMARY_KEY;type:UUID;" json:"id"`
-	CreatedAt  time.Time  `gorm:"CREATED NOTNULL" json:"created_at"`
-	UpdatedAt  time.Time  `gorm:"UPDATED NOTNULL" json:"updated_at"`
-	DeletedAt  *time.Time `gorm:"DELETED NULL" json:"deleted_at"`
-	RowVersion int        `gorm:"AUTO_INCREMENT"`
+	ID        id.ID      `gorm:"PRIMARY_KEY;type:UUID;" json:"id"`
+	CreatedAt time.Time  `gorm:"CREATED NOTNULL" json:"created_at"`
+	UpdatedAt time.Time  `gorm:"UPDATED NOTNULL" json:"updated_at"`
+	DeletedAt *time.Time `gorm:"DELETED NULL" json:"deleted_at"`
 }
 
 // BeforeCreate is run whenever a new instance of a model is created.
 func (m *BaseModelORM) BeforeCreate(scope *gorm.Scope) error {
+	clog.Warning("orm: BaseModelORM.BeforeCreate() running...")
 	if m != nil && m.ID == "" {
 		scope.SetColumn("ID", id.GetNewID())
 	}
@@ -35,12 +35,16 @@ type BaseModel struct {
 	Status       EntityStatus `gorm:"NOTNULL" json:"status"`
 }
 
+func (m *BaseModel) GetBaseEntity() Entity {
+	return m
+}
+
 // ValidationErrors function makes BaseModel implement the Entity interface
 func (m *BaseModel) ValidationErrors() []error {
 	var errs []error
-	if m.Status == "" {
-		errs = append(errs, fmt.Errorf("status cannot be empty"))
-	}
+	// if m.Status == "" {
+	// 	errs = append(errs, fmt.Errorf("status cannot be empty"))
+	// }
 	return errs
 }
 
@@ -75,6 +79,16 @@ func (m *BaseModel) AfterSave() error {
 	return nil
 }
 
+// BeforeDelete function makes BaseModel implement the Entity interface
+func (m *BaseModel) BeforeDelete() error {
+	return nil
+}
+
+// AfterDelete function makes BaseModel implement the Entity interface
+func (m *BaseModel) AfterDelete() error {
+	return nil
+}
+
 // EntityStatus represents mutually exclusive states of the entity
 type EntityStatus string
 
@@ -84,12 +98,18 @@ var DefaultStatus EntityStatus = StatusCreated
 
 // Entity is an interface which should be implemented by all types that go into our database
 type Entity interface {
+	GetBaseEntity() Entity
+
 	ValidationErrors() []error
 	IsValid() bool
 	IsEmpty() bool
 
 	BeforeCreate() error
 	AfterCreate() error
+
 	BeforeSave() error
 	AfterSave() error
+
+	BeforeDelete() error
+	AfterDelete() error
 }
