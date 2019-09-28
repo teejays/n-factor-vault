@@ -59,13 +59,16 @@ func (m *BaseModel) IsEmpty() bool {
 }
 
 // BeforeCreate function makes BaseModel implement the Entity interface
-func (m *BaseModel) BeforeCreate() error {
+func (m *BaseModel) BeforeCreateX() error {
 	m.Status = DefaultStatus
+	if m.ID == "" {
+		m.ID = id.GetNewID()
+	}
 	return nil
 }
 
 // AfterCreate function makes BaseModel implement the Entity interface
-func (m *BaseModel) AfterCreate() error {
+func (m *BaseModel) AfterCreateX() error {
 	return nil
 }
 
@@ -104,8 +107,8 @@ type Entity interface {
 	IsValid() bool
 	IsEmpty() bool
 
-	BeforeCreate() error
-	AfterCreate() error
+	BeforeCreateX() error
+	AfterCreateX() error
 
 	BeforeSave() error
 	AfterSave() error

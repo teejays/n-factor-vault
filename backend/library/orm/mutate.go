@@ -36,7 +36,7 @@ func InsertOne(v Entity) error {
 	}
 
 	// Run BeforeCreate function for this entity
-	err = v.BeforeCreate()
+	err = v.BeforeCreateX()
 	if err != nil {
 		return err
 	}
@@ -54,7 +54,7 @@ func InsertOne(v Entity) error {
 	}
 
 	// Run AfterCreate func
-	err = v.AfterCreate()
+	err = v.AfterCreateX()
 	if err != nil {
 		return err
 	}
@@ -93,12 +93,6 @@ func Save(v Entity) error {
 
 	// Save the entity in DB
 	err = gDB.Save(v).Error
-	if err != nil {
-		return err
-	}
-
-	// Run AfterCreate func
-	err = v.AfterCreate()
 	if err != nil {
 		return err
 	}

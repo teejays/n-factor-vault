@@ -31,7 +31,7 @@ func initError() error {
 
 	// Set the log level
 	clog.Infof("Application Environment: %s", env.GetAppEnv())
-	clog.LogLevel = 0
+	clog.LogLevel = 8
 
 	// Initialize the ORM package
 	err = orm.Init()
@@ -137,13 +137,15 @@ func helperLoginUser(name string) (string, error) {
 	if err := json.Unmarshal(body, &m); err != nil {
 		return "", err
 	}
-	tokenX := m["JWT"]
-	if tokenX == "" {
+	if _, ok := m["jwt"]; !ok {
 		return "", fmt.Errorf("couldn't get JWT token in response")
 	}
-	token, ok := tokenX.(string)
+	token, ok := m["jwt"].(string)
 	if !ok {
-		return "", fmt.Errorf("JWT token in response is not of type string")
+		return "", fmt.Errorf("JWT token is not of type string")
+	}
+	if token == "" {
+		return "", fmt.Errorf("JWT token is empty")
 	}
 
 	return token, nil
