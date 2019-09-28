@@ -6,7 +6,6 @@ package vault
 import (
 	"context"
 	"fmt"
-	"strings"
 
 	"github.com/teejays/clog"
 
@@ -68,21 +67,21 @@ type CreateAndInitializeVaultRequest struct {
 }
 
 type AddMemberByEmailsToVaultRequest struct {
-	VaultID      id.ID
-	MemberEmails []string
+	VaultID      id.ID    `validate:"required,notblank"`
+	MemberEmails []string `validate:"gt=0,dive,required,notblank"`
 }
 
 // CreateVaultRequest are the parameters that are passed when creating a vault
 type CreateVaultRequest struct {
 	AdminUserID id.ID
-	Name        string
-	Description string
+	Name        string `validate:"required,notblank"`
+	Description string `validate:"required,notblank"`
 }
 
 type CreateShamirVaultRequest struct {
 	VaultID id.ID `json:"vault_id"`
-	N       int   `json:"n"`
-	K       int   `json:"k"`
+	N       int   `validate:"required,min=3"`
+	K       int   `validate:"required,ltefield=N"`
 }
 
 type AddUserToVaultRequest struct {
@@ -94,17 +93,6 @@ type AddUserToVaultRequest struct {
 func CreateVault(ctx context.Context, req CreateVaultRequest) (*Vault, error) {
 	clog.Debugf("vault: creating vault %s", req.Name)
 	var err error
-
-	// Validate: Validate the request
-	if strings.TrimSpace(req.Name) == "" {
-		return nil, fmt.Errorf("name is empty")
-	}
-	if strings.TrimSpace(req.Description) == "" {
-		return nil, fmt.Errorf("description is empty")
-	}
-	if req.AdminUserID.IsEmpty() {
-		return nil, fmt.Errorf("admin userID is empty")
-	}
 
 	// Create a vault instance
 	v := Vault{
