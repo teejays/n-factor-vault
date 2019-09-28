@@ -16,24 +16,3 @@ COPY go.mod .
 COPY go.sum .
 RUN go mod download
 COPY . /app
-
-# BUILD MONOSERVICE
-WORKDIR /app/cmd/monoservice
-RUN go mod download
-RUN go build -o monoservice.bin main.go 
-
-# RUN
-
-# Pass the env variable: DEV, STAGE, PROD, TEST
-ARG app_env
-ENV ENV $app_env 
-
-# Declare ARGS
-ARG pg_host
-ARG pg_port
-ARG pg_user
-ARG pg_pwd
-ARG pg_dbname
-ENV POSTGRES_HOST=$pg_host POSTGRES_PORT=$pg_port POSTGRES_DBNAME=$pg_dbname POSTGRES_USER=$pg_user POSTGRES_PWD=$pg_pwd
-
-CMD /wait && ./monoservice.bin

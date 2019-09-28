@@ -31,7 +31,7 @@ func StartServer(addr string, port int, routes []Route, authMiddlewareFunc Middl
 
 }
 
-// GetHandler constructs a HTTP handler with all the routes and midlleware funcs configured
+// GetHandler constructs a HTTP handler with all the routes and middleware funcs configured
 func GetHandler(routes []Route, authMiddlewareFunc MiddlewareFunc, preMiddlewareFuncs, postMiddlewareFuncs []MiddlewareFunc) (http.Handler, error) {
 
 	// Initiate a router

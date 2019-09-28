@@ -9,15 +9,34 @@ import (
 	"github.com/teejays/clog"
 )
 
+type AppEnv int
+
 const (
-	DEV int = iota
+	DEV AppEnv = iota
 	STG
 	PROD
 	TEST
 )
 
-// GetEnv returns the DEV/STG/PROD environment that the code is running in.
-func GetEnv() int {
+func (e AppEnv) String() string {
+
+	switch e {
+	case DEV:
+		return "DEV"
+	case STG:
+		return "STG"
+	case PROD:
+		return "PROD"
+	case TEST:
+		return "TEST"
+	default:
+		return ""
+	}
+
+}
+
+// GetAppEnv returns the DEV/STG/PROD environment that the code is running in.
+func GetAppEnv() AppEnv {
 	defaultEnv := DEV
 	v, err := GetEnvVar("ENV")
 	if err != nil {
@@ -35,7 +54,6 @@ func GetEnv() int {
 		return DEV
 	}
 	if v == "test" || v == "testing" {
-		clog.Info("TEST Env")
 		return TEST
 	}
 	return defaultEnv

@@ -8,13 +8,13 @@ import (
 	"github.com/teejays/clog"
 )
 
-func emptyTable(model interface{}) (int, error) {
+func emptyTable(model Entity) (int, error) {
 	clog.Warnf("orm: emptying table for %s", reflect.ValueOf(model).Type())
 	db := gDB.Unscoped().Delete(model)
 	return int(db.RowsAffected), db.Error
 }
 
-func EmptyTables(models ...interface{}) error {
+func EmptyTables(models ...Entity) error {
 	// clog.Debugf("orm: EmptyTables(): param type: %d %s", reflect.TypeOf(models), reflect.ValueOf(models).Kind())
 	for _, m := range models {
 		// clog.Debugf("orm: EmptyTables(): Processing model #%d: %s", i+1, reflect.TypeOf(m))
@@ -28,7 +28,7 @@ func EmptyTables(models ...interface{}) error {
 	return nil
 }
 
-func EmptyTestTables(t *testing.T, models ...interface{}) {
+func EmptyTestTables(t *testing.T, models ...Entity) {
 
 	// clog.Debugf("orm: EmptyTestTables(): Number of models: %d", len(models))
 	// clog.Debugf("orm: EmptyTestTables(): param type: %s %s", reflect.TypeOf(models), reflect.ValueOf(models).Kind())

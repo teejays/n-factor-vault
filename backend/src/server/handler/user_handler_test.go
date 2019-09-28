@@ -37,7 +37,7 @@ import (
 
 func TestHandleSignup(t *testing.T) {
 
-	var relevantModels = []interface{}{user.User{}, user.Password{}}
+	var relevantModels = []orm.Entity{&user.User{}, &user.Password{}}
 	defer orm.EmptyTestTables(t, relevantModels...)
 
 	ts := apitest.TestSuite{
@@ -53,49 +53,56 @@ func TestHandleSignup(t *testing.T) {
 			Content:        "",
 			WantStatusCode: http.StatusBadRequest,
 			WantContent:    "",
-			WantErrMessage: "no content provided with the HTTP request",
+			WantErr:        true,
+			// WantErrMessage: "no content provided with the HTTP request",
 		},
 		{
 			Name:           "status BadRequest if request is not a valid JSON",
 			Content:        "I am a non-JSON content",
 			WantStatusCode: http.StatusBadRequest,
 			WantContent:    "",
-			WantErrMessage: "content is not a valid JSON",
+			WantErr:        true,
+			// WantErrMessage: "content is not a valid JSON",
 		},
 		{
 			Name:           "status BadRequest if request does not include name, email and password",
 			Content:        `{}`,
 			WantStatusCode: http.StatusBadRequest,
 			WantContent:    "",
-			WantErrMessage: "empty fields (name, email, password) provided",
+			WantErr:        true,
+			// WantErrMessage: "empty fields (name, email, password) provided",
 		},
 		{
-			Name:           "status BadRequest if request if name is missing",
+			Name:           "status BadRequest if name is missing",
 			Content:        `{"email":"email@email.com", "password":"secret"}`,
 			WantStatusCode: http.StatusBadRequest,
 			WantContent:    "",
-			WantErrMessage: "empty fields (name) provided",
+			WantErr:        true,
+			// WantErrMessage: "empty fields (name) provided",
 		},
 		{
-			Name:           "status BadRequest if request if email is missing",
+			Name:           "status BadRequest if email is missing",
 			Content:        `{"name":"Jon Doe", "password":"secret"}`,
 			WantStatusCode: http.StatusBadRequest,
 			WantContent:    "",
-			WantErrMessage: "empty fields (email) provided",
+			WantErr:        true,
+			// WantErrMessage: "empty fields (email) provided",
 		},
 		{
-			Name:           "status BadRequest if request if password is missing",
+			Name:           "status BadRequest if password is missing",
 			Content:        `{"name":"Jon Doe", "email":"email@email.com"}`,
 			WantStatusCode: http.StatusBadRequest,
 			WantContent:    "",
-			WantErrMessage: "empty fields (password) provided",
+			WantErr:        true,
+			// WantErrMessage: "empty fields (password) provided",
 		},
 		{
 			Name:           "status BadRequest if email is not a valid email",
 			Content:        `{"name":"Jon Doe", "email":"email.email.com", "password":"secret"}`,
 			WantStatusCode: http.StatusBadRequest,
 			WantContent:    "",
-			WantErrMessage: "email address has an invalid format",
+			WantErr:        true,
+			// WantErrMessage: "email address has an invalid format",
 		},
 		{
 			Name:           "status OK if request has valid name, email, and password",
@@ -120,7 +127,7 @@ func TestHandleSignup(t *testing.T) {
 func TestHandleLogin(t *testing.T) {
 
 	// Make sure that we empty any table that these tests might populate too
-	var relevantModels = []interface{}{user.User{}, user.Password{}}
+	var relevantModels = []orm.Entity{&user.User{}, &user.Password{}}
 	defer orm.EmptyTestTables(t, relevantModels...)
 
 	// Define the Test Suite
@@ -141,7 +148,7 @@ func TestHandleLogin(t *testing.T) {
 			WantContent:    "",
 			WantErrMessage: "",
 			AssertContentFields: map[string]apitest.AssertFunc{
-				"JWT": apitest.AssertNotEmptyFunc,
+				"jwt": apitest.AssertNotEmptyFunc,
 			},
 		},
 		{
@@ -151,7 +158,7 @@ func TestHandleLogin(t *testing.T) {
 			WantContent:    "",
 			WantErrMessage: "",
 			AssertContentFields: map[string]apitest.AssertFunc{
-				"JWT": apitest.AssertNotEmptyFunc,
+				"jwt": apitest.AssertNotEmptyFunc,
 			},
 		},
 		{

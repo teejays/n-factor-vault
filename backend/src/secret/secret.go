@@ -43,17 +43,7 @@ type SecretApproval struct {
 
 // Init initializes the service so it can connect with the ORM
 func Init() error {
-	err := orm.RegisterModel(&Secret{})
-	if err != nil {
-		return err
-	}
-
-	err = orm.RegisterModel(&SecretRequest{})
-	if err != nil {
-		return err
-	}
-
-	err = orm.RegisterModel(&SecretApproval{})
+	err := orm.RegisterModels(&Secret{}, &SecretRequest{}, &SecretApproval{})
 	if err != nil {
 		return err
 	}
@@ -149,7 +139,7 @@ func UpdateStatus(ctx context.Context, req UpdateParams) (*Status, error) {
 		"secret_request_id": req.SecretRequestID,
 	}
 
-	err := orm.UpdateByColumn(saConditions, SecretApproval{Approved: true})
+	err := orm.UpdateByColumn(saConditions, &SecretApproval{Approved: true})
 	if err != nil {
 		return nil, err
 	}
@@ -165,7 +155,7 @@ func UpdateStatus(ctx context.Context, req UpdateParams) (*Status, error) {
 				return GetStatus(ctx, GetParams{req.SecretRequestID, req.UserID})
 			}
 		}
-		err = orm.UpdateByColumn(map[string]interface{}{"id": req.SecretRequestID}, SecretRequest{Approved: true})
+		err = orm.UpdateByColumn(map[string]interface{}{"id": req.SecretRequestID}, &SecretRequest{Approved: true})
 		if err != nil {
 			return nil, err
 		}

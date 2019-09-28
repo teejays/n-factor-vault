@@ -19,25 +19,27 @@ services:
     build:
       context: .
       dockerfile: cmd/monoservice/Dockerfile
-      args:
-        app_env: DEV
-        pg_host: db
-        pg_port: 5432
-        pg_user: docker
-        pg_pwd: docker
-        pg_dbname: nfactorvault
     environment:
-      WAIT_HOSTS: db:5432
+      - ENV=DEV
+      - WAIT_HOSTS=db:5432
+      - POSTGRES_HOST=db
+      - POSTGRES_PORT=5432
+      - POSTGRES_DBNAME=nfactorvault
+      - POSTGRES_USER=docker
+      - POSTGRES_PWD=docker
     ports:
       - "8080:8080"
     depends_on:
       - db
+    command: ["sh", "-c", "/wait && go run /app/cmd/monoservice/main.go"]
     tty: true
 
 # TESTING
   test_db:
     image: "postgres:11"
     container_name: "monodb-test"
+    ports:
+      - "8432:5432"
     environment:
       - POSTGRES_USER=docker
       - POSTGRES_PASSWORD=docker
@@ -47,16 +49,17 @@ services:
   go_test:
     build:
       context: .
-      dockerfile: cmd/monoservice/Dockerfile.test
-      args:
-        app_env: TEST
-        pg_host: test_db
-        pg_port: 5432
-        pg_user: docker
-        pg_pwd: docker
-        pg_dbname: nfactorvault
+      dockerfile: cmd/monoservice/Dockerfile
     environment:
-      WAIT_HOSTS: test_db:5432
+      - ENV=TEST
+      - WAIT_HOSTS=test_db:5432
+      - POSTGRES_HOST=test_db
+      - POSTGRES_PORT=5432
+      - POSTGRES_DBNAME=nfactorvault
+      - POSTGRES_USER=docker
+      - POSTGRES_PWD=docker
+      - LOG_ORM=${LOG_ORM}
     depends_on:
       - test_db
+    command: ["sh", "-c", "/wait && go test -v -count=1 -p=1 ./..."]
     tty: true

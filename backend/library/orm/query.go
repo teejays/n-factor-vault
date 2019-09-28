@@ -11,7 +11,7 @@ import (
 * Q U E R Y
 * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-func FindByID(id id.ID, v interface{}) (bool, error) {
+func FindByID(id id.ID, v Entity) (bool, error) {
 	err := gDB.Where("id = ?", id).First(v).Error
 	if err != nil {
 		if gorm.IsRecordNotFoundError(err) {
@@ -22,7 +22,7 @@ func FindByID(id id.ID, v interface{}) (bool, error) {
 	return true, nil
 }
 
-func FindByColumn(colName string, colVal, v interface{}) (bool, error) {
+func FindByColumn(colName string, colVal interface{}, v interface{}) (bool, error) {
 	err := gDB.Where(map[string]interface{}{colName: colVal}).Find(v).Error
 	if err != nil {
 		if gorm.IsRecordNotFoundError(err) {
@@ -33,7 +33,7 @@ func FindByColumn(colName string, colVal, v interface{}) (bool, error) {
 	return true, nil
 }
 
-func FindOneByColumn(colName string, colVal, v interface{}) (bool, error) {
+func FindOneByColumn(colName string, colVal interface{}, v Entity) (bool, error) {
 	err := gDB.Where(map[string]interface{}{colName: colVal}).First(v).Error
 	if err != nil {
 		if gorm.IsRecordNotFoundError(err) {
@@ -44,7 +44,7 @@ func FindOneByColumn(colName string, colVal, v interface{}) (bool, error) {
 	return true, nil
 }
 
-func FindOne(conditions map[string]interface{}, v interface{}) (bool, error) {
+func FindOne(conditions map[string]interface{}, v Entity) (bool, error) {
 	db := gDB
 	for col, val := range conditions {
 		db = db.Where(fmt.Sprintf("%s = ?", col), val)

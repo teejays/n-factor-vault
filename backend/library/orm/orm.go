@@ -2,6 +2,7 @@ package orm
 
 import (
 	"fmt"
+	"reflect"
 	"time"
 
 	// github.com/jinzhu/gorm/dialects/postgres is needed to connect gorm to a Postgres database
@@ -53,12 +54,12 @@ func Init() error {
 	db.LogMode(false)
 
 	// For DEV environment or if env var LOG_ORM is set to true/1, log more ORM stuff
-	if env.GetEnv() == env.DEV || env.GetBoolOrDefault("LOG_ORM", false) {
+	if env.GetAppEnv() == env.DEV || env.GetBoolOrDefault("LOG_ORM", false) {
 		db.LogMode(true)
 	}
 
 	gDB = db
-	clog.Infof("orm: DB connection opened: %+v", gDB)
+	clog.Infof("orm: DB connection opened")
 	return nil
 }
 
@@ -115,7 +116,7 @@ func getPostgresConnectionString() (string, error) {
 // Handle the migration if the struct is being changed
 // TODO: Create a history table that keeps historic rows of the main table
 // Create a trigger that inserts data into the history table if a row is mutated in the main table
-func RegisterModel(v interface{}) error {
+func RegisterModel(v Entity) error {
 	clog.Infof("orm: Registering model %T", v)
 
 	// Create/Migrate the main table
@@ -124,11 +125,17 @@ func RegisterModel(v interface{}) error {
 		return db.Error
 	}
 
-	// Create a history table
+	// TODO: Create a history table
 
 	return gDB.AutoMigrate(v).Error
 }
 
-// type ModelHistory struct {
-// 	ID
-// }
+// RegisterModels register's multiple models in one go.
+func RegisterModels(models ...Entity) error {
+	for _, v := range models {
+		if err := RegisterModel(v); err != nil {
+			return fmt.Errorf("registering %s", reflect.TypeOf(v))
+		}
+	}
+	return nil
+}

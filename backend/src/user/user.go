@@ -2,8 +2,6 @@ package user
 
 import (
 	"fmt"
-	"regexp"
-	"strings"
 
 	"github.com/teejays/clog"
 
@@ -19,30 +17,20 @@ import (
 // User is the basic user object
 type User struct {
 	orm.BaseModel
-	Name  string `json:"name"`
-	Email string `json:"email"`
+	Name  string
+	Email string
 }
 
 // Password is separate struct for storing user hashed passwords
 type Password struct {
 	orm.BaseModel
-	UserID id.ID `gorm:"unique_index:idx_user" json:"user_id"`
+	UserID id.ID `gorm:"unique_index:idx_user"`
 	pwd.SecurePassword
 }
 
 // Init initializes the service so it can connect with the ORM
 func Init() (err error) {
-	// 1. Setup User ORM Model
-	err = orm.RegisterModel(User{})
-	if err != nil {
-		return err
-	}
-	// 2. Password Table
-	err = orm.RegisterModel(Password{})
-	if err != nil {
-		return err
-	}
-	return nil
+	return orm.RegisterModels(&User{}, &Password{})
 }
 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
@@ -50,58 +38,16 @@ func Init() (err error) {
 * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 type CreateUserRequest struct {
-	Name     string
-	Email    string
-	Password string
-}
-
-func (r CreateUserRequest) Validate() error {
-	var errs []error
-
-	var empty []string
-	if strings.TrimSpace(r.Name) == "" {
-		empty = append(empty, "name")
-	}
-	if strings.TrimSpace(r.Email) == "" {
-		empty = append(empty, "email")
-	}
-	if strings.TrimSpace(r.Password) == "" {
-		empty = append(empty, "password")
-	}
-	if len(empty) > 0 {
-		err := fmt.Errorf("empty fields (%s) provided", strings.Join(empty, ", "))
-		errs = append(errs, err)
-	}
-
-	emailRegexp := regexp.MustCompile("^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$")
-	if !emailRegexp.MatchString(r.Email) {
-		errs = append(errs, fmt.Errorf("email address has an invalid format"))
-	}
-
-	// Step 2a: Return nil if no issues found
-	if len(errs) < 1 {
-		return nil
-	}
-	// Step 2b: Combine the errors & return
-	errMessage := fmt.Sprintf("request has %d issue(s):", len(errs))
-	for i, e := range errs {
-		errMessage = errMessage + fmt.Sprintf("\n[%d] %v", i+1, e)
-	}
-	return fmt.Errorf(errMessage)
-
+	Name     string `validate:"required,notblank"`
+	Email    string `validate:"required,email,notblank"`
+	Password string `validate:"required,notblank"`
 }
 
 // CreateUser creates a new user
 func CreateUser(req CreateUserRequest) (*User, error) {
 	var err error
-
-	// Validate the request is good?
-	err = req.Validate()
-	if err != nil {
-		return nil, err
-	}
-
 	var u User
+
 	u.Name = req.Name
 	u.Email = req.Email
 
@@ -112,22 +58,26 @@ func CreateUser(req CreateUserRequest) (*User, error) {
 		return nil, err
 	}
 
-	// TODO: Before we create the user, we should check to
-	// make sure that a user with same Email, ID etc. does
-	// not exist.
+	// Before we create the user, we should check to make sure that a user with same Email, ID etc. does not exist.
 	existingUser, err := getUserByEmail(u.Email)
 	if err != nil {
 		return nil, err
 	}
-	if !existingUser.ID.IsEmpty() {
+	if !existingUser.IsEmpty() {
 		return nil, fmt.Errorf("an account with this email already exists")
 	}
 
 	// Save to DB (the ID will auto-populated)
-	orm.InsertOne(&u)
+	err = orm.InsertOne(&u)
+	if err != nil {
+		return nil, err
+	}
 
 	pass.UserID = u.ID
-	orm.InsertOne(&pass)
+	err = orm.InsertOne(&pass)
+	if err != nil {
+		return nil, err
+	}
 
 	return &u, nil
 }

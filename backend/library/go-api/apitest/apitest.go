@@ -52,8 +52,10 @@ type HandlerTest struct {
 
 // RunHandlerTests runs all the HandlerTests inside a testing.T.Run() loop
 func (ts TestSuite) RunHandlerTests(t *testing.T, tests []HandlerTest) {
+	t.Helper()
 	for _, tt := range tests {
 		t.Run(tt.Name, func(t *testing.T) {
+			t.Helper()
 			ts.RunHandlerTest(t, tt)
 		})
 	}
@@ -61,6 +63,7 @@ func (ts TestSuite) RunHandlerTests(t *testing.T, tests []HandlerTest) {
 
 // RunHandlerTest run all the HandlerTest tt
 func (ts TestSuite) RunHandlerTest(t *testing.T, tt HandlerTest) {
+	t.Helper()
 	// If both HandlerFunc and Handler are provided, we don't know which one to use
 	if ts.HandlerFunc != nil && ts.Handler != nil {
 		t.Errorf("both Handler and HandlerFunc field provided in TestSuite for %s", ts.Route)
@@ -109,8 +112,13 @@ func (ts TestSuite) RunHandlerTest(t *testing.T, tt HandlerTest) {
 	resp, body, err := hreq.MakeHandlerRequest(tt.Content, nil)
 	assert.NoError(t, err)
 
-	// Verify the respoonse
-	assert.Equal(t, tt.WantStatusCode, resp.StatusCode)
+	// Verify the response
+	assert.Equal(t, tt.WantStatusCode, resp.StatusCode, "Unexpected status code %d", resp.StatusCode)
+	// If we have failed, no point validating the response
+	if t.Failed() {
+		t.Errorf("apitest: Content validation failed for:\n%s\n", body)
+		return
+	}
 
 	if tt.WantContent != "" {
 		assert.Equal(t, tt.WantContent, string(body))
@@ -136,7 +144,7 @@ func (ts TestSuite) RunHandlerTest(t *testing.T, tt HandlerTest) {
 
 	// Run the individual assert functions for each of the field in the HTTP response body
 	if tt.AssertContentFields != nil {
-		// Unmarshall the body in to a map[string]interface{}
+		// Unmarshal the body in to a map[string]interface{}
 		var rJSON = make(map[string]interface{})
 		err = json.Unmarshal(body, &rJSON)
 		if err != nil {
@@ -147,13 +155,14 @@ func (ts TestSuite) RunHandlerTest(t *testing.T, tt HandlerTest) {
 			v, exists := rJSON[k]
 			if !exists {
 				t.Errorf("the key '%s' does not exist in the response but an AssertFunc for it was specified", k)
+				continue
 			}
 			assertFunc(t, v)
 		}
 	}
 
 	if tt.AssertContentFuncs != nil {
-		// Unmarshall the body in to a map[string]interface{}
+		// Unmarshal the body in to a map[string]interface{}
 		var rJSON interface{}
 		err = json.Unmarshal(body, &rJSON)
 		if err != nil {
@@ -165,7 +174,7 @@ func (ts TestSuite) RunHandlerTest(t *testing.T, tt HandlerTest) {
 	}
 
 	if t.Failed() {
-		fmt.Printf("apitest: Content validation failed for:\n%s\n", body)
+		t.Errorf("apitest: Content validation failed for:\n%s\n", body)
 	}
 
 	// Run AfterRunFuncs
