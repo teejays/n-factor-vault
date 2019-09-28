@@ -242,6 +242,32 @@ func GetUserFromContext(ctx context.Context) (*user.User, error) {
 
 }
 
+// GetUserIDFromContext returns the user ID of the authenticated user using the information in the context
+func GetUserIDFromContext(ctx context.Context) (id.ID, error) {
+	if !IsContextAuthenticated(ctx) {
+		return "", ErrNotAuthenticated
+	}
+
+	clog.Debug("auth: Getting User from Context")
+
+	// Check the value of userID in context
+	v := ctx.Value(gCtxKeyUserID)
+	if v == nil {
+		return "", ErrNotAuthenticated
+	}
+	userID, ok := v.(id.ID)
+	if !ok {
+		clog.Errorf("auth: gCtxKeyUserID value in context cannot be converted to id.ID: %v", v)
+		return "", ErrNotAuthenticated
+	}
+	if userID == "" {
+		return "", ErrNotAuthenticated
+	}
+
+	return userID, nil
+
+}
+
 // IsContextAuthenticated takes a context and returns true if it is authenticated
 func IsContextAuthenticated(ctx context.Context) bool {
 

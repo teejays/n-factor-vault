@@ -13,6 +13,7 @@ import (
 	"github.com/teejays/n-factor-vault/backend/library/orm"
 	"github.com/teejays/n-factor-vault/backend/library/util"
 
+	"github.com/teejays/n-factor-vault/backend/src/auth"
 	"github.com/teejays/n-factor-vault/backend/src/user"
 )
 
@@ -73,7 +74,6 @@ type AddMemberByEmailsToVaultRequest struct {
 
 // CreateVaultRequest are the parameters that are passed when creating a vault
 type CreateVaultRequest struct {
-	AdminUserID id.ID
 	Name        string `validate:"required,notblank"`
 	Description string `validate:"required,notblank"`
 }
@@ -94,11 +94,17 @@ func CreateVault(ctx context.Context, req CreateVaultRequest) (*Vault, error) {
 	clog.Debugf("vault: creating vault %s", req.Name)
 	var err error
 
+	// Authenticated user by default becomes the admin of the vault
+	adminUserId, err := auth.GetUserIDFromContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+
 	// Create a vault instance
 	v := Vault{
 		Name:        req.Name,
 		Description: req.Description,
-		AdminUserID: req.AdminUserID,
+		AdminUserID: adminUserId,
 	}
 
 	// Set the vault-user for the user creating this vault.

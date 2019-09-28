@@ -27,14 +27,6 @@ func HandleCreateVault(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Populate the UserID field of req using the authenticated userID
-	u, err := auth.GetUserFromContext(r.Context())
-	if err != nil {
-		api.WriteError(w, http.StatusInternalServerError, err, true, nil)
-		return
-	}
-	req.AdminUserID = u.ID
-
 	// Attempt login and get the token
 	v, err := vault.CreateVault(r.Context(), req)
 	if err != nil {
