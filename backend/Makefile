@@ -11,6 +11,10 @@ docker-run-db:
 docker-run-api: 
 	docker-compose up --build --remove-orphans monoservice
 
+# Build Go locally for fast usage
+local-go-build:
+	go build -o monoservice.bin cmd/monoservice/main.go
+
 # Test Commands
 docker-run-test-db:
 	docker-compose up --build --remove-orphans -d test_db
