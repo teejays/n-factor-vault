@@ -11,7 +11,6 @@ import (
 
 	"github.com/teejays/n-factor-vault/backend/library/id"
 	"github.com/teejays/n-factor-vault/backend/library/orm"
-	"github.com/teejays/n-factor-vault/backend/library/util"
 
 	"github.com/teejays/n-factor-vault/backend/src/auth"
 	"github.com/teejays/n-factor-vault/backend/src/user"
@@ -44,7 +43,7 @@ type VaultUser struct {
 	User          user.User `json:"user"`
 }
 
-// ShamirsVault represents the encryption structure of a vault
+// ShamirsVault represents the encryption structure of a vault. Each vault has Shamir's vault row associated with it.
 type ShamirsVault struct {
 	orm.BaseModel `gorm:"embedded"`
 	VaultID       id.ID `gorm:"unique_index:idx_vault" json:"vault_id"`
@@ -58,35 +57,13 @@ func Init() error {
 }
 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-* M E T H O D S
+* M U T A T O R S
 * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-
-type CreateAndInitializeVaultRequest struct {
-	CreateVaultRequest
-	CreateShamirVaultRequest
-	AddMemberByEmailsToVaultRequest
-}
-
-type AddMemberByEmailsToVaultRequest struct {
-	VaultID      id.ID    `validate:"required,notblank"`
-	MemberEmails []string `validate:"gt=0,dive,required,notblank"`
-}
 
 // CreateVaultRequest are the parameters that are passed when creating a vault
 type CreateVaultRequest struct {
 	Name        string `validate:"required,notblank"`
 	Description string `validate:"required,notblank"`
-}
-
-type CreateShamirVaultRequest struct {
-	VaultID id.ID `json:"vault_id"`
-	N       int   `validate:"required,min=3"`
-	K       int   `validate:"required,ltefield=N"`
-}
-
-type AddUserToVaultRequest struct {
-	VaultID id.ID `json:"vault_id"`
-	UserID  id.ID `json:"user_id"`
 }
 
 // CreateVault creates a new vault with the current authenticated user as the admin
@@ -122,113 +99,67 @@ func CreateVault(ctx context.Context, req CreateVaultRequest) (*Vault, error) {
 	return &v, nil
 }
 
-// CreateAndInitializeVault creates a new vault with the current authenticated user as the admin
-func CreateAndInitializeVault(ctx context.Context, req CreateAndInitializeVaultRequest) (*Vault, error) {
-	clog.Debugf("vault: creating vault %s", req.Name)
-	var err error
+type CreateShamirsVaultRequest struct {
+	N            int      `validate:"required,min=3"`
+	K            int      `validate:"required,ltefield=N"`
+	MemberEmails []string `validate:"gt=0,unique,dive,email"`
+	CreateVaultRequest
+}
 
-	// Create Vault instance
+func CreateShamirsVault(ctx context.Context, req CreateShamirsVaultRequest) (ShamirsVault, error) {
+	var err error
+	var sv ShamirsVault
+	// Step 1: Validate
+	// Most of the validation would've been done already using validators package when the request was received
+	// Custom Validation: Number of members should not be less than K
+	if len(req.MemberEmails) < req.K {
+		return sv, fmt.Errorf("number of members should be less than or equal to the minimum number of approvals required")
+	}
+
+	// Step 2: Create a vault
 	v, err := CreateVault(ctx, req.CreateVaultRequest)
 	if err != nil {
-		return nil, fmt.Errorf("creating vault: %v", err)
+		return sv, fmt.Errorf("creating vault: %v", err)
 	}
 
-	// Validate: Minimum Number of Approvals should be greater than 1
-	if req.K < 2 {
-		return nil, fmt.Errorf("minimum number of approvals required should be greater than 1")
-	}
-
-	// Validate: Member emails should be unique
-	errs := util.ValidateUniqueStrings(req.MemberEmails)
-	if len(errs) > 0 {
-		return nil, fmt.Errorf("%v", errs)
-	}
-	// Validate: Number of members should not be less than K
-	if len(req.MemberEmails) < req.K {
-		return nil, fmt.Errorf("number of members should be less than or equal to the minimum number of approvals required")
-	}
-
-	// TODO: Everything in here should happen in a single transaction
-
-	// Create vault users for the existing users on this vault
+	// Step 3: Add users to the Vault we just created
 	for _, email := range req.MemberEmails {
 		// Get the User object corresponding to the email and make sure that the user exists
 		// If it does, add it to the users for the vault
 		u, err := user.GetUserByEmail(email)
 		if err != nil {
-			return nil, err
+			return sv, err
 		}
 		if u.ID.IsEmpty() {
-			return nil, fmt.Errorf("no user with email %s found", email)
+			return sv, fmt.Errorf("no user with email %s found", email)
 		}
 		vu := VaultUser{UserID: u.ID}
 		v.VaultUsers = append(v.VaultUsers, vu)
 	}
-
 	// Save the Vault, which will add the members
 	err = orm.Save(v)
 	if err != nil {
-		return nil, err
+		return sv, err
 	}
 
-	// Create the instance to store the Shamir's config fot this vault
-	var sc = ShamirsVault{
-		N:       len(v.VaultUsers),
+	// Step 4: Create a Shamir's Vault
+	sv = ShamirsVault{
+		N:       len(v.VaultUsers), // Always going to be the number of possible users
 		K:       req.K,
 		VaultID: v.ID,
 	}
-
-	err = orm.InsertOne(&sc)
+	err = orm.InsertOne(&sv)
 	if err != nil {
-		return nil, err
+		return sv, err
 	}
 
-	return v, nil
+	return sv, nil
+
 }
 
-// GetVault returns the vault object with the given id
-func GetVault(ctx context.Context, id id.ID) (*Vault, error) {
-	clog.Debugf("%s: GetVault(): id %v", gServiceName, id)
-
-	var v Vault
-
-	// Get the Vault fields that are stored in the main DB (this does not include v.Users)
-	exists, err := orm.FindByID(id, &v)
-	if err != nil {
-		return nil, err
-	}
-	if !exists {
-		clog.Warnf("%s: no vault found with id %v", gServiceName, id)
-		return nil, nil
-	}
-	if v.ID != id {
-		panic(fmt.Sprintf("vault fetched by id (%v) has a different id (%v)", id, v.ID))
-	}
-
-	return &v, nil
-}
-
-// GetVaultsByUser fetches all vaults that the given user is a part of (even if the user did not create that vault)
-func GetVaultsByUser(ctx context.Context, userID id.ID) ([]*Vault, error) {
-	clog.Debugf("%s: GetVaultsByUsers(): user %v", gServiceName, userID)
-
-	// Get all the vaultIDs associated with the user
-	VaultUsers, err := getVaultUsersByUserID(ctx, userID)
-	if err != nil {
-		return nil, fmt.Errorf("could not get VaultUsers by userID: %v", err)
-	}
-
-	// Get all the associated vaults for those vaultIDs
-	var vaults = []*Vault{}
-	for _, vu := range VaultUsers {
-		v, err := GetVault(ctx, vu.VaultID)
-		if err != nil {
-			return nil, err
-		}
-		vaults = append(vaults, v)
-	}
-	clog.Debugf("%s: GetVaultsByUsers(): user %v: returning:\n%+v", gServiceName, userID, vaults)
-	return vaults, nil
+type AddUserToVaultRequest struct {
+	VaultID id.ID `json:"vault_id"`
+	UserID  id.ID `json:"user_id"`
 }
 
 func AddUserToVault(ctx context.Context, req AddUserToVaultRequest) (*Vault, error) {
@@ -279,6 +210,55 @@ func (v *Vault) AddUser(ctx context.Context, userID id.ID) error {
 		return fmt.Errorf("could not save: %v", err)
 	}
 	return nil
+}
+
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+* Q U E R I E S
+* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+
+// GetVault returns the vault object with the given id
+func GetVault(ctx context.Context, id id.ID) (*Vault, error) {
+	clog.Debugf("%s: GetVault(): id %v", gServiceName, id)
+
+	var v Vault
+
+	// Get the Vault fields that are stored in the main DB (this does not include v.Users)
+	exists, err := orm.FindByID(id, &v)
+	if err != nil {
+		return nil, err
+	}
+	if !exists {
+		clog.Warnf("%s: no vault found with id %v", gServiceName, id)
+		return nil, nil
+	}
+	if v.ID != id {
+		panic(fmt.Sprintf("vault fetched by id (%v) has a different id (%v)", id, v.ID))
+	}
+
+	return &v, nil
+}
+
+// GetVaultsByUser fetches all vaults that the given user is a part of (even if the user did not create that vault)
+func GetVaultsByUser(ctx context.Context, userID id.ID) ([]*Vault, error) {
+	clog.Debugf("%s: GetVaultsByUsers(): user %v", gServiceName, userID)
+
+	// Get all the vaultIDs associated with the user
+	VaultUsers, err := getVaultUsersByUserID(ctx, userID)
+	if err != nil {
+		return nil, fmt.Errorf("could not get VaultUsers by userID: %v", err)
+	}
+
+	// Get all the associated vaults for those vaultIDs
+	var vaults = []*Vault{}
+	for _, vu := range VaultUsers {
+		v, err := GetVault(ctx, vu.VaultID)
+		if err != nil {
+			return nil, err
+		}
+		vaults = append(vaults, v)
+	}
+	clog.Debugf("%s: GetVaultsByUsers(): user %v: returning:\n%+v", gServiceName, userID, vaults)
+	return vaults, nil
 }
 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
