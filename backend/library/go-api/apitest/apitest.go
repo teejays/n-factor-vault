@@ -48,6 +48,8 @@ type HandlerTest struct {
 	AssertContentFuncs  []AssertFunc
 	WantErr             bool
 	WantErrMessage      string
+
+	LogResponse bool
 }
 
 // RunHandlerTests runs all the HandlerTests inside a testing.T.Run() loop
@@ -111,6 +113,12 @@ func (ts TestSuite) RunHandlerTest(t *testing.T, tt HandlerTest) {
 	}
 	resp, body, err := hreq.MakeHandlerRequest(tt.Content, nil)
 	assert.NoError(t, err)
+
+	defer func() {
+		if tt.LogResponse {
+			t.Logf("Response Body: %s", body)
+		}
+	}()
 
 	// Verify the response
 	assert.Equal(t, tt.WantStatusCode, resp.StatusCode, "Unexpected status code %d", resp.StatusCode)
