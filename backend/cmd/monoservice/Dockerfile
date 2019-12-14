@@ -1,4 +1,4 @@
-FROM golang:alpine
+FROM golang:1.13.1-alpine
 
 RUN apk update && apk add make git
 
@@ -9,10 +9,12 @@ ENV CGO_ENABLED=0
 # Source: https://dev.to/hugodias/wait-for-mongodb-to-start-on-docker-3h8b
 ADD https://github.com/ufoscout/docker-compose-wait/releases/download/2.2.1/wait /wait
 RUN chmod +x /wait
+RUN /wait
 
-RUN mkdir -p /app
+# We don't need these since we're now mapping the code as a volume on the container through docker-compose  
+# RUN mkdir -p /app
 WORKDIR /app
-COPY go.mod .
-COPY go.sum .
-RUN go mod download
-COPY . /app
+# COPY go.mod .
+# COPY go.sum .
+# RUN go mod download
+# COPY . /app

@@ -31,8 +31,9 @@ services:
       - "8080:8080"
     depends_on:
       - db
+    volumes:
+      - ./:/app
     command: ["sh", "-c", "/wait && go run /app/cmd/monoservice/main.go"]
-    tty: true
 
 # TESTING
   test_db:
@@ -61,5 +62,7 @@ services:
       - LOG_ORM=${LOG_ORM}
     depends_on:
       - test_db
+    volumes:
+      - ./:/app
     command: ["sh", "-c", "/wait && go test -v -count=1 -p=1 ./..."]
     tty: true

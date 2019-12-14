@@ -112,8 +112,8 @@ func CreateShamirsVault(ctx context.Context, req CreateShamirsVaultRequest) (Sha
 	// Step 1: Validate
 	// Most of the validation would've been done already using validators package when the request was received
 	// Custom Validation: Number of members should not be less than K
-	if len(req.MemberEmails) < req.K {
-		return sv, fmt.Errorf("number of members should be less than or equal to the minimum number of approvals required")
+	if len(req.MemberEmails) != req.N-1 {
+		return sv, fmt.Errorf("number of member emails should be equal to N - 1 (expected %d, got %d)", req.N-1, len(req.MemberEmails))
 	}
 
 	// Step 2: Create a vault
@@ -123,6 +123,7 @@ func CreateShamirsVault(ctx context.Context, req CreateShamirsVaultRequest) (Sha
 	}
 
 	// Step 3: Add users to the Vault we just created
+EmailsLoop:
 	for _, email := range req.MemberEmails {
 		// Get the User object corresponding to the email and make sure that the user exists
 		// If it does, add it to the users for the vault
@@ -130,16 +131,23 @@ func CreateShamirsVault(ctx context.Context, req CreateShamirsVaultRequest) (Sha
 		if err != nil {
 			return sv, err
 		}
+
+		for _, vu := range v.VaultUsers {
+			if vu.UserID == u.ID {
+				// The User is already in the vault
+				continue EmailsLoop
+			}
+		}
 		if u.ID.IsEmpty() {
 			return sv, fmt.Errorf("no user with email %s found", email)
 		}
-		vu := VaultUser{UserID: u.ID}
+		vu := VaultUser{VaultID: v.ID, UserID: u.ID}
 		v.VaultUsers = append(v.VaultUsers, vu)
 	}
 	// Save the Vault, which will add the members
 	err = orm.Save(v)
 	if err != nil {
-		return sv, err
+		return sv, fmt.Errorf("adding users to vault: %v", err)
 	}
 
 	// Step 4: Create a Shamir's Vault
@@ -150,7 +158,7 @@ func CreateShamirsVault(ctx context.Context, req CreateShamirsVaultRequest) (Sha
 	}
 	err = orm.InsertOne(&sv)
 	if err != nil {
-		return sv, err
+		return sv, fmt.Errorf("saving Shamir's Vault: %v", err)
 	}
 
 	return sv, nil

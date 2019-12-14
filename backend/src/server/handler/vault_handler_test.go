@@ -6,7 +6,7 @@ import (
 
 	"github.com/teejays/clog"
 
-	"github.com/teejays/n-factor-vault/backend/library/go-api/apitest"
+	apitest "github.com/teejays/gopi/mux/muxtest"
 	"github.com/teejays/n-factor-vault/backend/library/orm"
 
 	"github.com/teejays/n-factor-vault/backend/src/auth"
@@ -95,6 +95,7 @@ func TestHandleCreateVault(t *testing.T) {
 			Content:        "",
 			WantStatusCode: http.StatusBadRequest,
 			WantErrMessage: "no content provided with the HTTP request",
+			LogResponse:    true,
 		},
 		{
 			Name:           "status BadRequest if request is not a valid JSON",
@@ -106,20 +107,20 @@ func TestHandleCreateVault(t *testing.T) {
 			Name:           "status BadRequest if request does not include required fields",
 			Content:        `{}`,
 			WantStatusCode: http.StatusBadRequest,
-			WantContent:    "",
-			WantErrMessage: "empty",
+			WantErrMessage: "There was an error processing the request: Key: 'CreateVaultRequest.Name' Error:Field validation for 'Name' failed on the 'required' tag\nKey: 'CreateVaultRequest.Description' Error:Field validation for 'Description' failed on the 'required' tag",
+			LogResponse:    true,
 		},
 		{
 			Name:           "status BadRequest if request if name is empty",
 			Content:        `{"name":"", "description":"a different desc than before"}`,
 			WantStatusCode: http.StatusBadRequest,
-			WantErrMessage: "name is empty",
+			WantErrMessage: "There was an error processing the request: Key: 'CreateVaultRequest.Name' Error:Field validation for 'Name' failed on the 'required' tag",
 		},
 		{
 			Name:           "status BadRequest if request if description is empty",
 			Content:        `{"name":"Facebook"}`,
 			WantStatusCode: http.StatusBadRequest,
-			WantErrMessage: "description is empty",
+			WantErrMessage: "There was an error processing the request: Key: 'CreateVaultRequest.Description' Error:Field validation for 'Description' failed on the 'required' tag",
 		},
 	}
 
@@ -179,6 +180,61 @@ func TestHandleGetVaults(t *testing.T) {
 			WantStatusCode:      http.StatusOK,
 			AuthBearerTokenFunc: func(t *testing.T) string { return token2 }, // this is a token for user with no vaults
 			AssertContentFuncs:  []apitest.AssertFunc{apitest.AssertIsSlice, apitest.AssertSliceOfLen(0)},
+		},
+	}
+
+	ts.RunHandlerTests(t, tests)
+
+}
+
+func TestHandleCreateShamirsVault(t *testing.T) {
+
+	var relevantOrmTables = []orm.Entity{&user.User{}, &user.Password{}, &vault.Vault{}, &vault.VaultUser{}}
+	orm.EmptyTestTables(t, relevantOrmTables...)
+	defer orm.EmptyTestTables(t, relevantOrmTables...)
+
+	// Setup tests
+	// 1. Create users
+	helperCreateTestUsersT(t)
+	// 2. Login a user
+	token1, _ := helperLoginTestUsersT(t)
+	// 4. Create a func that returns the token, so we can use that function as a param to the TestSuite
+	var getAuthTokenFunc = func(t *testing.T) string { return token1 }
+
+	ts := apitest.TestSuite{
+		Route:                 "/v1/vault/shamirs",
+		Method:                http.MethodPost,
+		HandlerFunc:           handler.HandleCreateShamirsVault,
+		AuthBearerTokenFunc:   getAuthTokenFunc,
+		AuthMiddlewareHandler: auth.AuthenticateRequestMiddleware,
+	}
+
+	happyContent := `{"name":"Facebook", "description":"Shared account for our org", "n":3, "k":2, "member_emails":["jon.doe@email.com","jane.does@email.com"]}`
+
+	tests := []apitest.HandlerTest{
+		{
+			Name:           "fail if k > n",
+			Content:        `{"name":"Facebook", "description":"Shared account for our org", "n":3, "k":4, "member_emails":["jon.doe@email.com","jane.does@email.com"]}`,
+			WantStatusCode: http.StatusBadRequest,
+			LogResponse:    true,
+		},
+		{
+			Name:           "fail if n < 3",
+			Content:        `{"name":"Facebook", "description":"Shared account for our org", "n":1, "k":2, "member_emails":["jon.doe@email.com","jane.does@email.com"]}`,
+			WantStatusCode: http.StatusBadRequest,
+			LogResponse:    true,
+		},
+		{
+			Name:           "fail if number of emails provided are not equal to n",
+			Content:        `{"name":"Facebook", "description":"Shared account for our org", "n":3, "k":2, "member_emails":["jon.doe@email.com"]}`,
+			WantStatusCode: http.StatusBadRequest,
+			LogResponse:    true,
+		},
+		{
+			Name:           "happy path",
+			Content:        happyContent,
+			WantStatusCode: http.StatusCreated,
+			LogResponse:    true,
 		},
 	}
 

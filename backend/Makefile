@@ -23,7 +23,7 @@ docker-stop-test-db:
 docker-run-go-test:
 	docker-compose up --build --remove-orphans go_test
 
-test-db-connect:
+connect-test-db:
 	PGPASSWORD=docker psql -h localhost -p 8432 -U docker -w -d nfactorvault
 
 ## Kill Commands

@@ -4,7 +4,7 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/teejays/n-factor-vault/backend/library/go-api/apitest"
+	apitest "github.com/teejays/gopi/mux/muxtest"
 	"github.com/teejays/n-factor-vault/backend/library/orm"
 
 	"github.com/teejays/n-factor-vault/backend/src/server/handler"

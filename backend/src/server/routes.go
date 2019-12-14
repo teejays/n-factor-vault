@@ -3,7 +3,7 @@ package server
 import (
 	"net/http"
 
-	api "github.com/teejays/n-factor-vault/backend/library/go-api"
+	api "github.com/teejays/gopi/mux"
 
 	"github.com/teejays/n-factor-vault/backend/src/server/handler"
 )
@@ -46,16 +46,24 @@ func GetRoutes() []api.Route {
 			Path:        "login",
 			HandlerFunc: handler.HandleLogin,
 		},
-		// Vault Create Handler
 		{
+			// Vault Create Handler
 			Method:       http.MethodPost,
 			Version:      ver1,
 			Path:         "vault",
 			HandlerFunc:  handler.HandleCreateVault,
 			Authenticate: true,
 		},
-		// Vault Get Vaults For User
 		{
+			// Create a Shamir's Vault
+			Method:       http.MethodPost,
+			Version:      ver1,
+			Path:         "vault/shamirs",
+			HandlerFunc:  handler.HandleCreateShamirsVault,
+			Authenticate: true,
+		},
+		{
+			// Vault Get Vaults For User
 			Method:       http.MethodGet,
 			Version:      ver1,
 			Path:         "vaults",
@@ -63,12 +71,14 @@ func GetRoutes() []api.Route {
 			Authenticate: true,
 		},
 		{
+			// Add a user to a Vault
 			Method:       http.MethodPost,
 			Version:      ver1,
 			Path:         "vault/{vault_id}/user",
 			HandlerFunc:  handler.HandleAddVaultUser,
 			Authenticate: true,
 		},
+		// Secrets
 		{
 			Method:       http.MethodPost,
 			Version:      ver1,

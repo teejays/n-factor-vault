@@ -1,12 +1,12 @@
 package server
 
 import (
-	api "github.com/teejays/n-factor-vault/backend/library/go-api"
+	api "github.com/teejays/gopi/mux"
 
 	"github.com/teejays/n-factor-vault/backend/src/auth"
 )
 
-// StartServer initializes and startes the HTTP server
+// StartServer initializes and starts the HTTP server
 func StartServer(addr string, port int) error {
 
 	// Get the Routes

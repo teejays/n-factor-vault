@@ -5,7 +5,7 @@ import (
 	"io/ioutil"
 	"net/http"
 
-	"github.com/teejays/n-factor-vault/backend/library/go-api"
+	api "github.com/teejays/gopi/mux"
 
 	"github.com/teejays/n-factor-vault/backend/src/auth"
 	"github.com/teejays/n-factor-vault/backend/src/user"

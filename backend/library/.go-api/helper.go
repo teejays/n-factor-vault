@@ -10,9 +10,8 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/teejays/clog"
-
-	"github.com/teejays/n-factor-vault/backend/library/json"
-	"github.com/teejays/n-factor-vault/backend/library/validator"
+	"github.com/teejays/gopi/json"
+	"github.com/teejays/gopi/validator"
 )
 
 // GetQueryParamInt extracts the param value with given name  out of the URL query
@@ -142,7 +141,7 @@ func UnmarshalJSONFromRequest(r *http.Request, v interface{}) error {
 		return ErrEmptyBody
 	}
 
-	clog.Debugf("api: Unmarshalling to JSON: body:\n%+v", string(body))
+	clog.Debugf("api: Unmarshaling to JSON: body:\n%+v", string(body))
 
 	// Unmarshal JSON into Go type
 	err = json.Unmarshal(body, &v)

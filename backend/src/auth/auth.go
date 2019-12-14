@@ -10,7 +10,7 @@ import (
 	"github.com/teejays/clog"
 	jwt "github.com/teejays/go-jwt"
 
-	"github.com/teejays/n-factor-vault/backend/library/go-api"
+	api "github.com/teejays/gopi/mux"
 	pwd "github.com/teejays/n-factor-vault/backend/library/go-pwd"
 	"github.com/teejays/n-factor-vault/backend/library/id"
 	"github.com/teejays/n-factor-vault/backend/src/user"
@@ -45,7 +45,7 @@ type LoginCredentials struct {
 	Password string `json:"password"`
 }
 
-// LoginResponse is the structure of how a successful login request repoonse will look like
+// LoginResponse is the structure of how a successful login request response will look like
 type LoginResponse struct {
 	JWT string
 }

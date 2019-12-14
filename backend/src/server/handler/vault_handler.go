@@ -6,16 +6,12 @@ import (
 
 	"github.com/teejays/clog"
 
-	"github.com/teejays/n-factor-vault/backend/library/go-api"
+	api "github.com/teejays/gopi/mux"
 	"github.com/teejays/n-factor-vault/backend/library/id"
 
 	"github.com/teejays/n-factor-vault/backend/src/auth"
 	"github.com/teejays/n-factor-vault/backend/src/vault"
 )
-
-func init() {
-
-}
 
 // HandleCreateVault creates a new vault for the authenticated user
 func HandleCreateVault(w http.ResponseWriter, r *http.Request) {
@@ -29,6 +25,27 @@ func HandleCreateVault(w http.ResponseWriter, r *http.Request) {
 
 	// Attempt login and get the token
 	v, err := vault.CreateVault(r.Context(), req)
+	if err != nil {
+		api.WriteError(w, http.StatusBadRequest, err, false, nil)
+		return
+	}
+
+	api.WriteResponse(w, http.StatusCreated, v)
+
+}
+
+// HandleCreateShamirsVault creates a new vault for the authenticated user
+func HandleCreateShamirsVault(w http.ResponseWriter, r *http.Request) {
+
+	var req vault.CreateShamirsVaultRequest
+	err := api.UnmarshalJSONFromRequest(r, &req)
+	if err != nil {
+		api.WriteError(w, http.StatusBadRequest, err, false, nil)
+		return
+	}
+
+	// Attempt login and get the token
+	v, err := vault.CreateShamirsVault(r.Context(), req)
 	if err != nil {
 		api.WriteError(w, http.StatusBadRequest, err, false, nil)
 		return

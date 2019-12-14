@@ -8,9 +8,9 @@ import (
 
 	"github.com/teejays/clog"
 
+	api "github.com/teejays/gopi/mux"
+	apitest "github.com/teejays/gopi/mux/muxtest"
 	"github.com/teejays/n-factor-vault/backend/library/env"
-	"github.com/teejays/n-factor-vault/backend/library/go-api"
-	"github.com/teejays/n-factor-vault/backend/library/go-api/apitest"
 	"github.com/teejays/n-factor-vault/backend/library/orm"
 
 	"github.com/teejays/n-factor-vault/backend/src/auth"
